@@ -1,19 +1,19 @@
-import type { WorkoutDay } from "@/lib/workouts"
-import { ExerciseRow } from "@/components/exercise-row"
-import { DaySessionSummary } from "@/components/day-session-summary"
-import { Dumbbell, Layers } from "lucide-react"
+import type { WorkoutDay } from "@/lib/workouts";
+import { ExerciseRow } from "@/components/exercise-row";
+import { DaySessionSummary } from "@/components/day-session-summary";
+import { Dumbbell, Layers } from "lucide-react";
 
 export function WorkoutCard({ day }: { day: WorkoutDay }) {
-  const totalSets = day.exercises.reduce((sum, e) => sum + e.sets, 0)
-  const totalReps = day.exercises.reduce((sum, e) => sum + e.sets * e.reps, 0)
-  const pushCount = day.exercises.filter((e) => e.movement === "push").length
-  const pullCount = day.exercises.filter((e) => e.movement === "pull").length
+  const totalSets = day.exercises.reduce((sum, e) => sum + e.sets, 0);
+  const totalReps = day.exercises.reduce((sum, e) => sum + e.sets * e.reps, 0);
+  const pushCount = day.exercises.filter((e) => e.movement === "push").length;
+  const pullCount = day.exercises.filter((e) => e.movement === "pull").length;
 
   const stats = [
     { label: "Total Sets", value: String(totalSets) },
     { label: "Total Reps", value: String(totalReps) },
     { label: "Push / Pull", value: `${pushCount} / ${pullCount}` },
-  ]
+  ];
 
   return (
     <section className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -68,5 +68,5 @@ export function WorkoutCard({ day }: { day: WorkoutDay }) {
         ))}
       </ul>
     </section>
-  )
+  );
 }

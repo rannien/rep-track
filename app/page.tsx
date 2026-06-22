@@ -1,13 +1,10 @@
-import { workouts } from "@/lib/workouts"
-import { WorkoutCard } from "@/components/workout-card"
-import { SessionProvider } from "@/components/session-provider"
-import { Dumbbell } from "lucide-react"
+import { workouts } from "@/lib/workouts";
+import { WorkoutCard } from "@/components/workout-card";
+import { SessionProvider } from "@/components/session-provider";
+import { Dumbbell } from "lucide-react";
 
 export default function Page() {
-  const totalExercises = workouts.reduce(
-    (sum, day) => sum + day.exercises.length,
-    0,
-  )
+  const totalExercises = workouts.reduce((sum, day) => sum + day.exercises.length, 0);
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-14">
@@ -24,11 +21,10 @@ export default function Page() {
           Weekly Training Program
         </h1>
         <p className="max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Two training days, {totalExercises} exercises total. Log each set with its
-          weight and reps — tap the{" "}
-          <span className="font-semibold text-primary">+</span> on a move to start
-          today&apos;s session. Every set shows what you lifted last time, so you
-          can chase progressive overload.
+          Two training days, {totalExercises} exercises total. Log each set with its weight and reps
+          — tap the <span className="font-semibold text-primary">+</span> on a move to start
+          today&apos;s session. Every set shows what you lifted last time, so you can chase
+          progressive overload.
         </p>
       </header>
 
@@ -44,5 +40,5 @@ export default function Page() {
         Keep your form clean and rest enough between sets.
       </footer>
     </main>
-  )
+  );
 }

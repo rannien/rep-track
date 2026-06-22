@@ -1,45 +1,44 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import type { Exercise } from "@/lib/workouts"
-import { MovementBadge, MuscleBadge } from "@/components/badges"
-import { useSessions } from "@/components/session-provider"
-import { formatDate, formatSet, lastEntryForExercise } from "@/lib/sessions"
-import { Play, Plus, Dumbbell, Trash2, Check, X, History } from "lucide-react"
+import { useState } from "react";
+import type { Exercise } from "@/lib/workouts";
+import { MovementBadge, MuscleBadge } from "@/components/badges";
+import { useSessions } from "@/components/session-provider";
+import { formatDate, formatSet, lastEntryForExercise } from "@/lib/sessions";
+import { Play, Plus, Dumbbell, Trash2, Check, X, History } from "lucide-react";
 
 export function ExerciseRow({
   exercise,
   dayId,
   dayLabel,
 }: {
-  exercise: Exercise
-  dayId: string
-  dayLabel: string
+  exercise: Exercise;
+  dayId: string;
+  dayLabel: string;
 }) {
-  const { hydrated, sessions, todaySession, addSet, removeSet } = useSessions()
-  const [open, setOpen] = useState(false)
-  const [reps, setReps] = useState(String(exercise.reps))
-  const [weight, setWeight] = useState("")
+  const { hydrated, sessions, todaySession, addSet, removeSet } = useSessions();
+  const [open, setOpen] = useState(false);
+  const [reps, setReps] = useState(String(exercise.reps));
+  const [weight, setWeight] = useState("");
 
-  const session = todaySession(dayId)
-  const todaysSets =
-    session?.entries.find((e) => e.exercise === exercise.name)?.sets ?? []
-  const last = lastEntryForExercise(sessions, exercise.name, session?.id)
+  const session = todaySession(dayId);
+  const todaysSets = session?.entries.find((e) => e.exercise === exercise.name)?.sets ?? [];
+  const last = lastEntryForExercise(sessions, exercise.name, session?.id);
 
   // The set you're about to log, and what you did for that same set last time.
-  const nextSetNumber = todaysSets.length + 1
-  const target = last?.entry.sets[todaysSets.length]
+  const nextSetNumber = todaysSets.length + 1;
+  const target = last?.entry.sets[todaysSets.length];
 
   function handleAdd() {
-    const repsNum = Number.parseInt(reps, 10)
-    const weightNum = Number.parseFloat(weight)
-    if (!Number.isFinite(repsNum) || repsNum <= 0) return
+    const repsNum = Number.parseInt(reps, 10);
+    const weightNum = Number.parseFloat(weight);
+    if (!Number.isFinite(repsNum) || repsNum <= 0) return;
     addSet({ id: dayId, label: dayLabel }, exercise.name, {
       reps: repsNum,
       weight: Number.isFinite(weightNum) ? weightNum : 0,
-    })
-    setReps(String(repsNum))
-    setWeight("")
+    });
+    setReps(String(repsNum));
+    setWeight("");
   }
 
   return (
@@ -81,7 +80,11 @@ export function ExerciseRow({
             aria-label={`Log a set for ${exercise.name}`}
             className="inline-flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {open ? <X className="size-4" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
+            {open ? (
+              <X className="size-4" aria-hidden="true" />
+            ) : (
+              <Plus className="size-4" aria-hidden="true" />
+            )}
           </button>
           <a
             href={exercise.youtube}
@@ -101,7 +104,7 @@ export function ExerciseRow({
           {hydrated && todaysSets.length > 0 ? (
             <ul className="flex flex-col gap-1.5">
               {todaysSets.map((log, i) => {
-                const ref = last?.entry.sets[i]
+                const ref = last?.entry.sets[i];
                 return (
                   <li
                     key={log.id}
@@ -127,7 +130,7 @@ export function ExerciseRow({
                       <Trash2 className="size-3.5" aria-hidden="true" />
                     </button>
                   </li>
-                )
+                );
               })}
             </ul>
           ) : null}
@@ -211,5 +214,5 @@ export function ExerciseRow({
         </div>
       ) : null}
     </li>
-  )
+  );
 }

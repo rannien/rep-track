@@ -7,16 +7,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Package manager is **pnpm** (see `pnpm-lock.yaml`).
 
 ```bash
-pnpm dev      # Next.js dev server (http://localhost:3000)
-pnpm build    # production build
-pnpm start    # serve the production build
-pnpm lint     # eslint .
+pnpm dev            # Next.js dev server (http://localhost:3000)
+pnpm build          # production build
+pnpm start          # serve the production build
+pnpm lint           # oxlint   (config: .oxlintrc.json)
+pnpm lint:fix       # oxlint --fix
+pnpm format         # oxfmt    (writes in place; config: .oxfmtrc.json)
+pnpm format:check   # oxfmt --check
 pnpm exec tsc --noEmit   # real type-check — see caveat below
 ```
 
 There is no test suite.
 
+**Linting/formatting is [oxc](https://oxc.rs), not ESLint/Prettier.** `oxlint` + `oxfmt` replace them — there is no eslint/prettier config or dependency. oxfmt formats with Prettier-compatible defaults (semicolons, double quotes, 80-col). `.oxlintrc.json` disables `react/react-in-jsx-scope` (the automatic JSX runtime makes it moot) and `import/no-unassigned-import` (side-effect CSS imports). The vendored skill under `.claude/` is excluded from oxfmt via `ignorePatterns`.
+
 **Build skips type errors.** `next.config.mjs` sets `typescript.ignoreBuildErrors: true` and `images.unoptimized: true`, so `pnpm build` will succeed even with TypeScript errors. Run `pnpm exec tsc --noEmit` to actually surface type problems.
+
+**pnpm won't build `sharp`/`msw`.** `pnpm-workspace.yaml` sets `allowBuilds: {sharp: false, msw: false}` — both are unneeded (sharp because images are unoptimized; msw is an unused dev mock). Without this, pnpm v11 aborts every `pnpm <script>` with `ERR_PNPM_IGNORED_BUILDS`.
 
 ## Architecture
 
@@ -34,7 +41,7 @@ Logging is organized around **training-day sessions**, not loose per-exercise en
 - **`components/session-provider.tsx`** (client) is the single owner of session state and the only writer to `localStorage` (key `rep-track-sessions-v1`). It exposes `useSessions()` with `addSet` / `removeSet` / `todaySession`. `addSet` lazily creates today's session and the exercise entry; `removeSet` prunes empty entries and sessions.
 - Consume sessions via `useSessions()` from any client component — **never read `localStorage` directly elsewhere.** `ExerciseRow` and `DaySessionSummary` are consumers.
 - **Context flows through server components**: `SessionProvider` (client) wraps `WorkoutCard` (server) which renders `ExerciseRow`/`DaySessionSummary` (client) — the consumers still receive the context because they're in the provider's subtree in the final React tree.
-- **"Last time" reference**: `lastEntryForExercise()` returns the most recent *prior* session that logged a given exercise (excluding the in-progress one), so the UI can show what you lifted set-by-set last session (e.g. set 1: 80 kg × 8, set 2: 100 kg × 8) to drive progressive overload.
+- **"Last time" reference**: `lastEntryForExercise()` returns the most recent _prior_ session that logged a given exercise (excluding the in-progress one), so the UI can show what you lifted set-by-set last session (e.g. set 1: 80 kg × 8, set 2: 100 kg × 8) to drive progressive overload.
 
 ### Hydration-safe localStorage
 

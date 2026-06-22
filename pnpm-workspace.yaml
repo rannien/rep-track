@@ -1,0 +1,8 @@
+# Build-script decisions for dependencies that ship postinstall scripts.
+# Both are set to false (do not run their build scripts) — this also stops
+# pnpm v11 from failing every `pnpm <script>` with ERR_PNPM_IGNORED_BUILDS.
+#   sharp — not needed: next.config.mjs sets images.unoptimized: true
+#   msw   — dev mock service worker, unused in this app
+allowBuilds:
+  msw: false
+  sharp: false

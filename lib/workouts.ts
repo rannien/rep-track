@@ -1,21 +1,21 @@
-export type Movement = "push" | "pull" | "hinge" | "squat"
+export type Movement = "push" | "pull" | "hinge" | "squat";
 
 export type Exercise = {
-  name: string
-  sets: number
-  reps: number
-  muscles: string[]
-  movement: Movement
-  youtube: string
-}
+  name: string;
+  sets: number;
+  reps: number;
+  muscles: string[];
+  movement: Movement;
+  youtube: string;
+};
 
 export type WorkoutDay = {
-  id: string
-  label: string
-  title: string
-  focus: string
-  exercises: Exercise[]
-}
+  id: string;
+  label: string;
+  title: string;
+  focus: string;
+  exercises: Exercise[];
+};
 
 export const workouts: WorkoutDay[] = [
   {
@@ -130,11 +130,11 @@ export const workouts: WorkoutDay[] = [
       },
     ],
   },
-]
+];
 
 export const movementLabels: Record<Movement, string> = {
   push: "Push",
   pull: "Pull",
   hinge: "Hinge",
   squat: "Squat",
-}
+};
