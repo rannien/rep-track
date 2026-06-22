@@ -34,8 +34,8 @@ export const workouts: WorkoutDay[] = [
       },
       {
         name: "Romanian Deadlift",
-        sets: 3,
-        reps: 12,
+        sets: 4,
+        reps: 8,
         muscles: ["Legs"],
         movement: "hinge",
         youtube: "https://www.youtube.com/results?search_query=romanian+deadlift+form",
