@@ -1,7 +1,7 @@
 "use client";
 
 import { useSessions } from "@/components/session-provider";
-import { sessionSetCount, sessionVolume } from "@/lib/sessions";
+import { sessionStats } from "@/lib/sessions";
 import { CalendarCheck, CalendarPlus } from "lucide-react";
 
 export function DaySessionSummary({ dayId }: { dayId: string }) {
@@ -24,17 +24,29 @@ export function DaySessionSummary({ dayId }: { dayId: string }) {
     );
   }
 
-  const sets = sessionSetCount(session);
-  const volume = sessionVolume(session);
+  const { sets, reps, volume } = sessionStats(session);
+  const stats = [
+    { label: "Sets", value: sets.toLocaleString() },
+    { label: "Reps", value: reps.toLocaleString() },
+    { label: "Volume", value: volume > 0 ? `${volume.toLocaleString()} kg` : "—" },
+  ];
 
   return (
-    <div className="mx-3 mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs sm:mx-4">
-      <CalendarCheck className="size-3.5 text-primary" aria-hidden="true" />
-      <span className="font-semibold text-card-foreground">Today&apos;s session</span>
-      <span className="text-muted-foreground">
-        {sets} {sets === 1 ? "set" : "sets"}
-        {volume > 0 ? ` · ${volume.toLocaleString()} kg total volume` : ""}
+    <div className="mx-3 mb-3 flex flex-col gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 sm:mx-4">
+      <span className="flex items-center gap-1.5 text-xs font-semibold text-card-foreground">
+        <CalendarCheck className="size-3.5 text-primary" aria-hidden="true" />
+        Today&apos;s session
       </span>
+      <dl className="grid grid-cols-3 gap-2">
+        {stats.map((stat) => (
+          <div key={stat.label} className="flex flex-col">
+            <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              {stat.label}
+            </dt>
+            <dd className="text-sm font-bold tabular-nums text-card-foreground">{stat.value}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }

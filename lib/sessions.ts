@@ -46,15 +46,25 @@ export function todayKey(): string {
   return new Date().toLocaleDateString("en-CA");
 }
 
-export function sessionSetCount(session: Session): number {
-  return session.entries.reduce((sum, e) => sum + e.sets.length, 0);
-}
+export type SessionStats = {
+  sets: number;
+  reps: number;
+  volume: number; // kg moved across the session: Σ weight × reps
+};
 
-export function sessionVolume(session: Session): number {
-  return session.entries.reduce(
-    (sum, e) => sum + e.sets.reduce((s, set) => s + set.weight * set.reps, 0),
-    0,
-  );
+// Aggregate sets, reps, and volume for a session in a single pass.
+export function sessionStats(session: Session): SessionStats {
+  let sets = 0;
+  let reps = 0;
+  let volume = 0;
+  for (const entry of session.entries) {
+    for (const set of entry.sets) {
+      sets += 1;
+      reps += set.reps;
+      volume += set.weight * set.reps;
+    }
+  }
+  return { sets, reps, volume };
 }
 
 // Most recent session — excluding the one in progress — that logged this
