@@ -198,9 +198,11 @@ export function ExerciseRow({
                 {last.entry.sets.map((s, i) => (
                   <span
                     key={s.id}
-                    className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-xs tabular-nums text-secondary-foreground"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-secondary py-0.5 pl-1 pr-2 text-xs tabular-nums text-secondary-foreground"
                   >
-                    <span className="font-semibold text-muted-foreground">{i + 1}</span>
+                    <span className="inline-flex size-4 items-center justify-center rounded bg-primary/10 text-[10px] font-semibold text-primary">
+                      {i + 1}
+                    </span>
                     {formatSet(s)}
                   </span>
                 ))}

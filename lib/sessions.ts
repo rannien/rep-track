@@ -90,6 +90,17 @@ export function formatDate(iso: string): string {
   });
 }
 
+// Fuller date for the history view, where sessions can span months/years —
+// unlike formatDate, which stays compact ("Jun 23") for the inline "last time".
+export function formatSessionDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function formatSet(set: { reps: number; weight: number }): string {
   return `${set.weight > 0 ? `${set.weight} kg ` : ""}× ${set.reps}`;
 }
