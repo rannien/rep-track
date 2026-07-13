@@ -102,5 +102,5 @@ export function formatSessionDate(iso: string): string {
 }
 
 export function formatSet(set: { reps: number; weight: number }): string {
-  return `${set.weight > 0 ? `${set.weight} kg ` : ""}× ${set.reps}`;
+  return `${set.weight} kg × ${set.reps}`;
 }

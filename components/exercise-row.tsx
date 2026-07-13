@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Exercise } from "@/lib/workouts";
 import { MovementBadge, MuscleBadge } from "@/components/badges";
 import { useSessions } from "@/components/session-provider";
 import { formatDate, formatSet, lastEntryForExercise } from "@/lib/sessions";
-import { Play, Plus, Dumbbell, Trash2, Check, X, History } from "lucide-react";
+import { Play, Plus, Dumbbell, Trash2, Check, History } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function ExerciseRow({
   exercise,
@@ -20,6 +21,7 @@ export function ExerciseRow({
   const [open, setOpen] = useState(false);
   const [reps, setReps] = useState(String(exercise.reps));
   const [weight, setWeight] = useState("");
+  const weightInputRef = useRef<HTMLInputElement>(null);
 
   const session = todaySession(dayId);
   const todaysSets = session?.entries.find((e) => e.exercise === exercise.name)?.sets ?? [];
@@ -29,20 +31,54 @@ export function ExerciseRow({
   const nextSetNumber = todaysSets.length + 1;
   const target = last?.entry.sets[todaysSets.length];
 
+  useEffect(() => {
+    if (target) {
+      setReps(String(target.reps));
+      setWeight(target.weight > 0 ? String(target.weight) : "");
+    } else {
+      setReps(String(exercise.reps));
+      setWeight("");
+    }
+  }, [target?.id, target?.reps, target?.weight, exercise.reps]);
+
+  useEffect(() => {
+    if (open) {
+      weightInputRef.current?.focus();
+    }
+  }, [open]);
+
   function handleAdd() {
-    const repsNum = Number.parseInt(reps, 10);
-    const weightNum = Number.parseFloat(weight);
-    if (!Number.isFinite(repsNum) || repsNum <= 0) return;
+    const repsTrimmed = reps.trim();
+    if (!/^\d+$/.test(repsTrimmed)) return;
+    const repsNum = Number.parseInt(repsTrimmed, 10);
+    if (repsNum <= 0) return;
+
+    let weightNum = 0;
+    const weightTrimmed = weight.trim();
+    if (weightTrimmed !== "") {
+      if (!/^\d+([.,]\d+)?$/.test(weightTrimmed)) return;
+      weightNum = Number.parseFloat(weightTrimmed.replace(",", "."));
+      if (!Number.isFinite(weightNum) || weightNum < 0) return;
+    }
+
     addSet({ id: dayId, label: dayLabel }, exercise.name, {
       reps: repsNum,
-      weight: Number.isFinite(weightNum) ? weightNum : 0,
+      weight: weightNum,
     });
     setReps(String(repsNum));
     setWeight("");
+    weightInputRef.current?.focus();
   }
 
   return (
-    <li className="flex flex-col gap-3 p-3 transition-colors hover:bg-secondary/40 sm:p-4">
+    <li
+      className={cn(
+        "flex flex-col p-3 border-l-2 transition-all duration-300 sm:p-4",
+        open
+          ? "border-l-primary bg-primary/5 dark:bg-primary/10"
+          : "border-l-transparent hover:bg-secondary/40"
+      )}
+    >
       <div className="flex items-center gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -80,11 +116,13 @@ export function ExerciseRow({
             aria-label={`Log a set for ${exercise.name}`}
             className="inline-flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {open ? (
-              <X className="size-4" aria-hidden="true" />
-            ) : (
-              <Plus className="size-4" aria-hidden="true" />
-            )}
+            <Plus
+              className={cn(
+                "size-4 transition-transform duration-300 ease-in-out",
+                open ? "rotate-45" : "rotate-0"
+              )}
+              aria-hidden="true"
+            />
           </button>
           <a
             href={exercise.youtube}
@@ -98,123 +136,139 @@ export function ExerciseRow({
         </div>
       </div>
 
-      {open ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-border bg-secondary/30 p-3">
-          {/* Sets logged in today's session */}
-          {hydrated && todaysSets.length > 0 ? (
-            <ul className="flex flex-col gap-1.5">
-              {todaysSets.map((log, i) => {
-                const ref = last?.entry.sets[i];
-                return (
-                  <li
-                    key={log.id}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-1.5"
-                  >
-                    <span className="flex items-center gap-2 text-sm tabular-nums text-card-foreground">
-                      <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
-                        {i + 1}
-                      </span>
-                      <span className="font-medium">{formatSet(log)}</span>
-                      {ref ? (
-                        <span className="text-xs font-normal text-muted-foreground">
-                          (last {formatSet(ref)})
-                        </span>
-                      ) : null}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => session && removeSet(session.id, exercise.name, log.id)}
-                      aria-label={`Remove set ${i + 1}`}
-                      className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      <div
+        inert={!open}
+        className={cn(
+          "grid transition-[grid-template-rows,opacity] duration-300 ease-in-out",
+          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="mt-3 flex flex-col gap-3 rounded-xl border border-border bg-secondary/30 p-3">
+            {/* Sets logged in today's session */}
+            {hydrated && todaysSets.length > 0 ? (
+              <ul className="flex flex-col gap-1.5">
+                {todaysSets.map((log, i) => {
+                  const ref = last?.entry.sets[i];
+                  return (
+                    <li
+                      key={log.id}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-1.5"
                     >
-                      <Trash2 className="size-3.5" aria-hidden="true" />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
+                      <span className="flex items-center gap-2 text-sm tabular-nums text-card-foreground">
+                        <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
+                          {i + 1}
+                        </span>
+                        <span className="font-medium">{formatSet(log)}</span>
+                        {ref ? (
+                          <span className="text-xs font-normal text-muted-foreground">
+                            (last {formatSet(ref)})
+                          </span>
+                        ) : null}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => session && removeSet(session.id, exercise.name, log.id)}
+                        aria-label={`Remove set ${i + 1}`}
+                        className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      >
+                        <Trash2 className="size-3.5" aria-hidden="true" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
 
-          {/* Add the next set; hint shows the matching set from last time */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-card-foreground">
-                Set {nextSetNumber}
-              </span>
-              {target ? (
-                <span className="text-xs text-muted-foreground">
-                  Last time: <span className="font-medium text-primary">{formatSet(target)}</span>
+            {/* Add the next set; hint shows the matching set from last time */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-card-foreground">
+                  Set {nextSetNumber}
                 </span>
-              ) : null}
-            </div>
-            <div className="flex items-end gap-2">
-              <label className="flex flex-1 flex-col gap-1">
-                <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Weight (kg)
-                </span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.5"
-                  value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
-                  placeholder={target && target.weight > 0 ? String(target.weight) : "0"}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-              </label>
-              <label className="flex flex-1 flex-col gap-1">
-                <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Reps
-                </span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  value={reps}
-                  onChange={(e) => setReps(e.target.value)}
-                  placeholder={target ? String(target.reps) : String(exercise.reps)}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={handleAdd}
-                className="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <Check className="size-4" aria-hidden="true" />
-                Save
-              </button>
-            </div>
-          </div>
-
-          {/* Full breakdown of the previous session for this exercise */}
-          {hydrated && last ? (
-            <div className="flex flex-col gap-1 border-t border-border pt-2">
-              <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Last session — {formatDate(last.session.startedAt)}
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {last.entry.sets.map((s, i) => (
-                  <span
-                    key={s.id}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-secondary py-0.5 pl-1 pr-2 text-xs tabular-nums text-secondary-foreground"
-                  >
-                    <span className="inline-flex size-4 items-center justify-center rounded bg-primary/10 text-[10px] font-semibold text-primary">
-                      {i + 1}
-                    </span>
-                    {formatSet(s)}
+                {target ? (
+                  <span className="text-xs text-muted-foreground">
+                    Last time: <span className="font-medium text-primary">{formatSet(target)}</span>
                   </span>
-                ))}
+                ) : null}
+              </div>
+              <div className="flex items-end gap-2">
+                <label className="flex flex-1 flex-col gap-1">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Weight (kg)
+                  </span>
+                  <input
+                    ref={weightInputRef}
+                    type="text"
+                    inputMode="decimal"
+                    value={weight}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/^[0-9.,]*$/.test(val)) {
+                        setWeight(val);
+                      }
+                    }}
+                    placeholder={target && target.weight > 0 ? String(target.weight) : "0"}
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </label>
+                <label className="flex flex-1 flex-col gap-1">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Reps
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={reps}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/^\d*$/.test(val)) {
+                        setReps(val);
+                      }
+                    }}
+                    placeholder={target ? String(target.reps) : String(exercise.reps)}
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAdd}
+                  className="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <Check className="size-4" aria-hidden="true" />
+                  Save
+                </button>
               </div>
             </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              No previous sessions yet — log your first set to start your history.
-            </p>
-          )}
+
+            {/* Full breakdown of the previous session for this exercise */}
+            {hydrated && last ? (
+              <div className="flex flex-col gap-1 border-t border-border pt-2">
+                <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Last session — {formatDate(last.session.startedAt)}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {last.entry.sets.map((s, i) => (
+                    <span
+                      key={s.id}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-secondary py-0.5 pl-1 pr-2 text-xs tabular-nums text-secondary-foreground"
+                    >
+                      <span className="inline-flex size-4 items-center justify-center rounded bg-primary/10 text-[10px] font-semibold text-primary">
+                        {i + 1}
+                      </span>
+                      {formatSet(s)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No previous sessions yet — log your first set to start your history.
+              </p>
+            )}
+          </div>
         </div>
-      ) : null}
+      </div>
     </li>
   );
 }
