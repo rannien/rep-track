@@ -39,7 +39,7 @@ export function ExerciseRow({
       setReps(String(exercise.reps));
       setWeight("");
     }
-  }, [target?.id, target?.reps, target?.weight, exercise.reps]);
+  }, [target, exercise.reps]);
 
   useEffect(() => {
     if (open) {
@@ -76,7 +76,7 @@ export function ExerciseRow({
         "flex flex-col p-3 border-l-2 transition-all duration-300 sm:p-4",
         open
           ? "border-l-primary bg-primary/5 dark:bg-primary/10"
-          : "border-l-transparent hover:bg-secondary/40"
+          : "border-l-transparent hover:bg-secondary/40",
       )}
     >
       <div className="flex items-center gap-3">
@@ -119,7 +119,7 @@ export function ExerciseRow({
             <Plus
               className={cn(
                 "size-4 transition-transform duration-300 ease-in-out",
-                open ? "rotate-45" : "rotate-0"
+                open ? "rotate-45" : "rotate-0",
               )}
               aria-hidden="true"
             />
@@ -140,7 +140,7 @@ export function ExerciseRow({
         inert={!open}
         className={cn(
           "grid transition-[grid-template-rows,opacity] duration-300 ease-in-out",
-          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
         )}
       >
         <div className="overflow-hidden">
