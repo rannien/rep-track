@@ -8,6 +8,20 @@ import { formatDate, formatSet, lastEntryForExercise } from "@/lib/sessions";
 import { Play, Plus, Dumbbell, Trash2, Check, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Scroll the row above the on-screen keyboard. window.innerHeight ignores the
+// keyboard, so measure against the visual viewport instead; never push the top
+// of the row out of view.
+function scrollAboveKeyboard(el: HTMLElement) {
+  const viewport = window.visualViewport;
+  const visibleTop = viewport?.offsetTop ?? 0;
+  const visibleBottom = visibleTop + (viewport?.height ?? window.innerHeight);
+  const rect = el.getBoundingClientRect();
+  const distance = Math.min(rect.bottom + 12 - visibleBottom, rect.top - visibleTop);
+  if (distance <= 0) return;
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollBy({ top: distance, behavior: reduceMotion ? "auto" : "smooth" });
+}
+
 export function ExerciseRow({
   exercise,
   dayId,
@@ -22,6 +36,7 @@ export function ExerciseRow({
   const [reps, setReps] = useState(String(exercise.reps));
   const [weight, setWeight] = useState("");
   const weightInputRef = useRef<HTMLInputElement>(null);
+  const rowRef = useRef<HTMLLIElement>(null);
 
   const session = todaySession(dayId);
   const todaysSets = session?.entries.find((e) => e.exercise === exercise.name)?.sets ?? [];
@@ -43,7 +58,10 @@ export function ExerciseRow({
 
   useEffect(() => {
     if (open) {
-      weightInputRef.current?.focus();
+      // The panel is still collapsed here — scrolling happens once the expand
+      // transition finishes, so keep the browser from scrolling to the
+      // pre-expansion position.
+      weightInputRef.current?.focus({ preventScroll: true });
     }
   }, [open]);
 
@@ -72,6 +90,7 @@ export function ExerciseRow({
 
   return (
     <li
+      ref={rowRef}
       className={cn(
         "flex flex-col p-3 border-l-2 transition-all duration-300 sm:p-4",
         open
@@ -138,6 +157,16 @@ export function ExerciseRow({
 
       <div
         inert={!open}
+        onTransitionEnd={(e) => {
+          if (
+            open &&
+            e.target === e.currentTarget &&
+            e.propertyName === "grid-template-rows" &&
+            rowRef.current
+          ) {
+            scrollAboveKeyboard(rowRef.current);
+          }
+        }}
         className={cn(
           "grid transition-[grid-template-rows,opacity] duration-300 ease-in-out",
           open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
