@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { Exercise } from "@/lib/workouts";
 import { MovementBadge, MuscleBadge } from "@/components/badges";
+import { useExercisePanel } from "@/components/exercise-panel-provider";
 import { useSessions } from "@/components/session-provider";
 import { formatDate, formatSet, lastEntryForExercise } from "@/lib/sessions";
 import { Play, Plus, Dumbbell, Trash2, Check, History } from "lucide-react";
@@ -32,7 +33,9 @@ export function ExerciseRow({
   dayLabel: string;
 }) {
   const { hydrated, sessions, todaySession, addSet, removeSet } = useSessions();
-  const [open, setOpen] = useState(false);
+  const { openPanel, setOpenPanel } = useExercisePanel();
+  const panelKey = `${dayId}:${exercise.name}`;
+  const open = openPanel === panelKey;
   const [reps, setReps] = useState(String(exercise.reps));
   const [weight, setWeight] = useState("");
   const weightInputRef = useRef<HTMLInputElement>(null);
@@ -130,7 +133,7 @@ export function ExerciseRow({
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => setOpenPanel(open ? null : panelKey)}
             aria-expanded={open}
             aria-label={`Log a set for ${exercise.name}`}
             className="inline-flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

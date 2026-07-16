@@ -48,17 +48,14 @@ export function SessionHistory() {
 }
 
 function SessionList({ sessions }: { sessions: Session[] }) {
-  // Controlled <details> so the most recent session starts expanded and the
-  // open/closed state survives re-renders. Keyed by session id.
-  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set([sessions[0].id]));
+  // Controlled <details> as an accordion: at most one session open at a time,
+  // starting with the most recent. Keyed by session id.
+  const [openId, setOpenId] = useState<string | null>(sessions[0].id);
 
   function toggle(id: string, open: boolean) {
-    setOpenIds((prev) => {
-      const next = new Set(prev);
-      if (open) next.add(id);
-      else next.delete(id);
-      return next;
-    });
+    // Closing the previous <details> fires its own toggle event with
+    // open=false — the guard keeps it from clearing the newly opened id.
+    setOpenId((prev) => (open ? id : prev === id ? null : prev));
   }
 
   return (
@@ -74,7 +71,7 @@ function SessionList({ sessions }: { sessions: Session[] }) {
           <li key={session.id}>
             <details
               className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
-              open={openIds.has(session.id)}
+              open={openId === session.id}
               onToggle={(e) => toggle(session.id, e.currentTarget.open)}
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:p-5 [&::-webkit-details-marker]:hidden">
@@ -104,11 +101,11 @@ function SessionList({ sessions }: { sessions: Session[] }) {
                 />
               </summary>
 
-              <ul className="flex flex-col gap-2.5 border-t border-border p-4 sm:p-5">
+              <ul className="divide-y divide-border border-t border-border">
                 {session.entries.map((entry) => {
                   const exerciseVolume = entryVolume(entry);
                   return (
-                    <li key={entry.exercise} className="flex flex-col gap-1.5">
+                    <li key={entry.exercise} className="flex flex-col gap-1.5 px-4 py-3 sm:px-5">
                       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                         <span className="text-sm font-medium text-card-foreground">
                           {entry.exercise}
