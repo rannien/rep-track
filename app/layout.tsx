@@ -16,19 +16,11 @@ export const metadata: Metadata = {
     "Track your training days — log every set with weight and reps, and see what you lifted last time.",
   generator: "v0.app",
   icons: {
+    // The icon carries its own solid indigo tile, so one set works for both
+    // light and dark browser chrome.
     icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
+      { url: "/icon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
     ],
     apple: "/apple-icon.png",
   },
