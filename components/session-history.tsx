@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { useSessions } from "@/components/session-provider";
-import { type Session, formatSessionDate, formatSet, sessionStats } from "@/lib/sessions";
+import {
+  type Session,
+  entryVolume,
+  formatSessionDate,
+  formatSet,
+  sessionStats,
+} from "@/lib/sessions";
 import { CalendarPlus, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
@@ -99,26 +105,37 @@ function SessionList({ sessions }: { sessions: Session[] }) {
               </summary>
 
               <ul className="flex flex-col gap-2.5 border-t border-border p-4 sm:p-5">
-                {session.entries.map((entry) => (
-                  <li key={entry.exercise} className="flex flex-col gap-1.5">
-                    <span className="text-sm font-medium text-card-foreground">
-                      {entry.exercise}
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {entry.sets.map((set, i) => (
-                        <span
-                          key={set.id}
-                          className="inline-flex items-center gap-1.5 rounded-md bg-secondary py-0.5 pl-1 pr-2 text-xs tabular-nums text-secondary-foreground"
-                        >
-                          <span className="inline-flex size-4 items-center justify-center rounded bg-primary/10 text-[10px] font-semibold text-primary">
-                            {i + 1}
-                          </span>
-                          {formatSet(set)}
+                {session.entries.map((entry) => {
+                  const exerciseVolume = entryVolume(entry);
+                  return (
+                    <li key={entry.exercise} className="flex flex-col gap-1.5">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                        <span className="text-sm font-medium text-card-foreground">
+                          {entry.exercise}
                         </span>
-                      ))}
-                    </div>
-                  </li>
-                ))}
+                        <span className="text-xs text-muted-foreground">
+                          Volume{" "}
+                          <span className="font-semibold tabular-nums text-card-foreground">
+                            {exerciseVolume > 0 ? `${exerciseVolume.toLocaleString()} kg` : "—"}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {entry.sets.map((set, i) => (
+                          <span
+                            key={set.id}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-secondary py-0.5 pl-1 pr-2 text-xs tabular-nums text-secondary-foreground"
+                          >
+                            <span className="inline-flex size-4 items-center justify-center rounded bg-primary/10 text-[10px] font-semibold text-primary">
+                              {i + 1}
+                            </span>
+                            {formatSet(set)}
+                          </span>
+                        ))}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </details>
           </li>

@@ -52,6 +52,11 @@ export type SessionStats = {
   volume: number; // kg moved across the session: Σ weight × reps
 };
 
+// Volume (kg moved) for a single exercise entry: Σ weight × reps.
+export function entryVolume(entry: ExerciseEntry): number {
+  return entry.sets.reduce((sum, set) => sum + set.weight * set.reps, 0);
+}
+
 // Aggregate sets, reps, and volume for a session in a single pass.
 export function sessionStats(session: Session): SessionStats {
   let sets = 0;
