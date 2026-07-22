@@ -35,7 +35,9 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} bg-background`}>
       <body className="font-sans antialiased">
         <SessionProvider>{children}</SessionProvider>
-        {process.env.NODE_ENV === "production" && <Analytics />}
+        {/* Dev-safe unconditionally: @vercel/analytics runs in debug mode
+            outside production and sends nothing. */}
+        <Analytics />
       </body>
     </html>
   );
