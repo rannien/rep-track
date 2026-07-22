@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useSessions } from "@/components/session-provider";
 import {
   type Session,
@@ -10,7 +11,6 @@ import {
   sessionStats,
 } from "@/lib/sessions";
 import { CalendarPlus, ChevronDown } from "lucide-react";
-import Link from "next/link";
 
 export function SessionHistory() {
   const { hydrated, sessions } = useSessions();
