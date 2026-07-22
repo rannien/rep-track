@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   checks:
-    name: format · lint · types
+    name: format · lint · types · tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,3 +41,6 @@ jobs:
 
       - name: Type-check (tsc)
         run: pnpm typecheck
+
+      - name: Test (vitest)
+        run: pnpm test
