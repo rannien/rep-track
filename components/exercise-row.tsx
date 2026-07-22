@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import type { Exercise } from "@/lib/workouts";
 import { MovementBadge, MuscleBadge } from "@/components/badges";
 import { useExercisePanel } from "@/components/exercise-panel-provider";
 import { useSessions } from "@/components/session-provider";
-import { formatDate, formatSet, lastEntryForExercise } from "@/lib/sessions";
+import {
+  formatDate,
+  formatSet,
+  lastEntryForExercise,
+  parseRepsInput,
+  parseWeightInput,
+} from "@/lib/sessions";
 import { Play, Plus, Dumbbell, Trash2, Check, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +49,12 @@ export function ExerciseRow({
 
   const session = todaySession(dayId);
   const todaysSets = session?.entries.find((e) => e.exercise === exercise.name)?.sets ?? [];
-  const last = lastEntryForExercise(sessions, exercise.name, session?.id);
+  // `sessions` is referentially stable across keystrokes (reps/weight are
+  // local state), so the full-history scan only reruns when a set changes.
+  const last = useMemo(
+    () => lastEntryForExercise(sessions, exercise.name, session?.id),
+    [sessions, exercise.name, session?.id],
+  );
 
   // The set you're about to log, and what you did for that same set last time.
   const nextSetNumber = todaysSets.length + 1;
@@ -68,25 +79,19 @@ export function ExerciseRow({
     }
   }, [open]);
 
+  // The Save button is disabled while these are null, so an invalid input
+  // can never end in a silent no-op.
+  const repsValue = parseRepsInput(reps);
+  const weightValue = parseWeightInput(weight);
+  const canSave = repsValue !== null && weightValue !== null;
+
   function handleAdd() {
-    const repsTrimmed = reps.trim();
-    if (!/^\d+$/.test(repsTrimmed)) return;
-    const repsNum = Number.parseInt(repsTrimmed, 10);
-    if (repsNum <= 0) return;
-
-    let weightNum = 0;
-    const weightTrimmed = weight.trim();
-    if (weightTrimmed !== "") {
-      if (!/^\d+([.,]\d+)?$/.test(weightTrimmed)) return;
-      weightNum = Number.parseFloat(weightTrimmed.replace(",", "."));
-      if (!Number.isFinite(weightNum) || weightNum < 0) return;
-    }
-
+    if (repsValue === null || weightValue === null) return;
     addSet({ id: dayId, label: dayLabel }, exercise.name, {
-      reps: repsNum,
-      weight: weightNum,
+      reps: repsValue,
+      weight: weightValue,
     });
-    setReps(String(repsNum));
+    setReps(String(repsValue));
     setWeight("");
     weightInputRef.current?.focus();
   }
@@ -265,7 +270,8 @@ export function ExerciseRow({
                 <button
                   type="button"
                   onClick={handleAdd}
-                  className="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  disabled={!canSave}
+                  className="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:opacity-50"
                 >
                   <Check className="size-4" aria-hidden="true" />
                   Save
