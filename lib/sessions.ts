@@ -210,6 +210,46 @@ export function sessionStats(session: Session): SessionStats {
 // never both on one axis.
 export type StatsMetric = "volume" | "reps";
 
+// A calendar-date URL param is untrusted input: anything but a YYYY-MM-DD
+// string is discarded (the same shape check a stored dateKey passes).
+export function parseDateKeyParam(value: string | null): string | null {
+  return value !== null && DATE_KEY_PATTERN.test(value) ? value : null;
+}
+
+// A dateKey names a local calendar day; build the Date from its parts —
+// new Date("YYYY-MM-DD") would parse as UTC midnight and render a day off
+// west of Greenwich.
+export function dateKeyToDate(key: string): Date {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+// Inverse of dateKeyToDate, following todayKey's local-date convention.
+export function dateToDateKey(date: Date): string {
+  return date.toLocaleDateString("en-CA");
+}
+
+// Compact label for a dateKey ("Jul 19"); goes through the local Date so the
+// shown day always matches the key.
+export function formatDateKey(key: string): string {
+  return dateKeyToDate(key).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Sessions whose calendar date falls inside the inclusive [from, to] range;
+// a null bound is an open end. Date-only YYYY-MM-DD strings compare safely
+// as strings — no timestamp math, no timezone involved.
+export function filterSessionsByDateRange(
+  sessions: Session[],
+  from: string | null,
+  to: string | null,
+): Session[] {
+  if (from === null && to === null) return sessions;
+  return sessions.filter(
+    (session) =>
+      (from === null || session.dateKey >= from) && (to === null || session.dateKey <= to),
+  );
+}
+
 export type TotalStats = {
   sessions: number;
   sets: number;

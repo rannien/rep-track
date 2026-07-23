@@ -3,11 +3,16 @@ import {
   type LoggedSet,
   type Session,
   entryVolume,
+  dateKeyToDate,
+  dateToDateKey,
   exerciseSeries,
   exerciseTotals,
+  filterSessionsByDateRange,
   formatDate,
+  formatDateKey,
   formatSet,
   lastEntryForExercise,
+  parseDateKeyParam,
   parseRepsInput,
   parseSessionsBlob,
   parseWeightInput,
@@ -304,6 +309,55 @@ describe("chart series", () => {
 
   it("returns an empty series for an unlogged exercise", () => {
     expect(exerciseSeries([makeSession()], "Deadlift")).toEqual([]);
+  });
+});
+
+describe("date-range filtering", () => {
+  const july = [
+    makeSession({ id: "a", dateKey: "2026-07-05" }),
+    makeSession({ id: "b", dateKey: "2026-07-15" }),
+    makeSession({ id: "c", dateKey: "2026-07-25" }),
+  ];
+
+  it("keeps sessions inside the inclusive bounds", () => {
+    const result = filterSessionsByDateRange(july, "2026-07-05", "2026-07-15");
+
+    expect(result.map((s) => s.id)).toEqual(["a", "b"]);
+  });
+
+  it("treats a null bound as an open end", () => {
+    expect(filterSessionsByDateRange(july, "2026-07-10", null).map((s) => s.id)).toEqual([
+      "b",
+      "c",
+    ]);
+    expect(filterSessionsByDateRange(july, null, "2026-07-10").map((s) => s.id)).toEqual(["a"]);
+  });
+
+  it("returns the input array untouched with no bounds", () => {
+    expect(filterSessionsByDateRange(july, null, null)).toBe(july);
+  });
+
+  it("yields an empty list for a range with no sessions", () => {
+    expect(filterSessionsByDateRange(july, "2026-08-01", "2026-08-31")).toEqual([]);
+  });
+
+  it("accepts only YYYY-MM-DD date params", () => {
+    expect(parseDateKeyParam("2026-07-20")).toBe("2026-07-20");
+    expect(parseDateKeyParam("20/07/2026")).toBeNull();
+    expect(parseDateKeyParam("2026-7-20")).toBeNull();
+    expect(parseDateKeyParam("")).toBeNull();
+    expect(parseDateKeyParam(null)).toBeNull();
+  });
+
+  it("round-trips a dateKey through a local Date", () => {
+    for (const key of ["2026-07-19", "2026-01-01", "2026-12-31"]) {
+      expect(dateToDateKey(dateKeyToDate(key))).toBe(key);
+    }
+  });
+
+  it("formats a dateKey without a timezone shift", () => {
+    expect(formatDateKey("2026-07-19")).toBe("Jul 19");
+    expect(formatDateKey("2026-01-01")).toBe("Jan 1");
   });
 });
 
