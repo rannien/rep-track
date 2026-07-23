@@ -186,17 +186,142 @@ export function entryVolume(entry: ExerciseEntry): number {
   return entry.sets.reduce((sum, set) => sum + set.weight * set.reps, 0);
 }
 
+function entryReps(entry: ExerciseEntry): number {
+  return entry.sets.reduce((sum, set) => sum + set.reps, 0);
+}
+
+// Accumulate one entry's sets/reps/volume into a mutable aggregate.
+function addEntryStats(target: SessionStats, entry: ExerciseEntry): void {
+  target.sets += entry.sets.length;
+  target.reps += entryReps(entry);
+  target.volume += entryVolume(entry);
+}
+
 // Aggregate sets, reps, and volume for a session.
 export function sessionStats(session: Session): SessionStats {
-  let sets = 0;
-  let reps = 0;
-  let volume = 0;
+  const stats: SessionStats = { sets: 0, reps: 0, volume: 0 };
   for (const entry of session.entries) {
-    sets += entry.sets.length;
-    reps += entry.sets.reduce((sum, set) => sum + set.reps, 0);
-    volume += entryVolume(entry);
+    addEntryStats(stats, entry);
   }
-  return { sets, reps, volume };
+  return stats;
+}
+
+// Metric the stats charts plot; volume is kg moved, reps a plain count —
+// never both on one axis.
+export type StatsMetric = "volume" | "reps";
+
+export type TotalStats = {
+  sessions: number;
+  sets: number;
+  reps: number;
+  volume: number;
+};
+
+// Lifetime totals across the whole history, for the stats page KPI row.
+export function totalStats(sessions: Session[]): TotalStats {
+  const totals: TotalStats = { sessions: sessions.length, sets: 0, reps: 0, volume: 0 };
+  for (const session of sessions) {
+    for (const entry of session.entries) {
+      addEntryStats(totals, entry);
+    }
+  }
+  return totals;
+}
+
+export type SessionPoint = {
+  sessionId: string;
+  dayId: string;
+  dayLabel: string;
+  startedAt: string;
+  sets: number;
+  reps: number;
+  volume: number;
+};
+
+// Per-session aggregates in chronological order (oldest first) — the shape
+// the session trend chart plots.
+export function sessionSeries(sessions: Session[]): SessionPoint[] {
+  return sessions
+    .toSorted((a, b) => a.startedAt.localeCompare(b.startedAt))
+    .map((session) => {
+      const stats = sessionStats(session);
+      return {
+        sessionId: session.id,
+        dayId: session.dayId,
+        dayLabel: session.dayLabel,
+        startedAt: session.startedAt,
+        sets: stats.sets,
+        reps: stats.reps,
+        volume: stats.volume,
+      };
+    });
+}
+
+export type ExerciseTotals = {
+  exercise: string;
+  sessions: number; // sessions that logged at least one set of it
+  sets: number;
+  reps: number;
+  volume: number;
+};
+
+// Lifetime per-exercise totals, sorted by the given metric descending (ties
+// by name) — the shape the per-exercise bar chart plots.
+export function exerciseTotals(sessions: Session[], sortBy: StatsMetric): ExerciseTotals[] {
+  const byExercise = new Map<string, ExerciseTotals>();
+  for (const session of sessions) {
+    const countedThisSession = new Set<string>();
+    for (const entry of session.entries) {
+      if (entry.sets.length === 0) continue;
+      let totals = byExercise.get(entry.exercise);
+      if (!totals) {
+        totals = { exercise: entry.exercise, sessions: 0, sets: 0, reps: 0, volume: 0 };
+        byExercise.set(entry.exercise, totals);
+      }
+      if (!countedThisSession.has(entry.exercise)) {
+        countedThisSession.add(entry.exercise);
+        totals.sessions += 1;
+      }
+      addEntryStats(totals, entry);
+    }
+  }
+  return [...byExercise.values()].toSorted(
+    (a, b) => b[sortBy] - a[sortBy] || a.exercise.localeCompare(b.exercise),
+  );
+}
+
+export type ExercisePoint = {
+  sessionId: string;
+  dayLabel: string;
+  startedAt: string;
+  sets: number;
+  reps: number;
+  volume: number;
+};
+
+// One exercise's per-session aggregates in chronological order (oldest
+// first) — the shape the exercise trend chart plots. Duplicate entries for
+// the exercise within a session are summed; set-less entries are skipped,
+// matching lastEntryForExercise.
+export function exerciseSeries(sessions: Session[], exercise: string): ExercisePoint[] {
+  const points: ExercisePoint[] = [];
+  for (const session of sessions) {
+    const entries = session.entries.filter((e) => e.exercise === exercise && e.sets.length > 0);
+    if (entries.length === 0) continue;
+    const point: ExercisePoint = {
+      sessionId: session.id,
+      dayLabel: session.dayLabel,
+      startedAt: session.startedAt,
+      sets: 0,
+      reps: 0,
+      volume: 0,
+    };
+    for (const entry of entries) {
+      addEntryStats(point, entry);
+    }
+    points.push(point);
+  }
+  return points.toSorted((a, b) => a.startedAt.localeCompare(b.startedAt));
 }
 
 // Most recent session — excluding the one in progress — that logged this

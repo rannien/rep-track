@@ -3,14 +3,18 @@ import {
   type LoggedSet,
   type Session,
   entryVolume,
+  exerciseSeries,
+  exerciseTotals,
   formatDate,
   formatSet,
   lastEntryForExercise,
   parseRepsInput,
   parseSessionsBlob,
   parseWeightInput,
+  sessionSeries,
   sessionStats,
   todayKey,
+  totalStats,
 } from "./sessions";
 
 function makeSet(overrides: Partial<LoggedSet> = {}): LoggedSet {
@@ -157,6 +161,149 @@ describe("session aggregation", () => {
       reps: 8 + 5 + 12,
       volume: 80 * 8 + 100 * 5,
     });
+  });
+});
+
+describe("chart series", () => {
+  it("returns zero totals for an empty history", () => {
+    expect(totalStats([])).toEqual({ sessions: 0, sets: 0, reps: 0, volume: 0 });
+  });
+
+  it("sums totals across sessions", () => {
+    const a = makeSession();
+    const b = makeSession({
+      id: "session-2",
+      entries: [{ exercise: "Squat", sets: [makeSet({ id: "set-2", weight: 100, reps: 5 })] }],
+    });
+
+    expect(totalStats([a, b])).toEqual({
+      sessions: 2,
+      sets: 2,
+      reps: 8 + 5,
+      volume: 80 * 8 + 100 * 5,
+    });
+  });
+
+  it("orders session points oldest first with per-session aggregates", () => {
+    const newer = makeSession({ id: "b", startedAt: "2026-07-18T10:00:00.000Z" });
+    const older = makeSession({
+      id: "a",
+      dayId: "day-2",
+      dayLabel: "Pull",
+      startedAt: "2026-07-10T10:00:00.000Z",
+    });
+
+    const result = sessionSeries([newer, older]);
+
+    expect(result.map((p) => p.sessionId)).toEqual(["a", "b"]);
+    expect(result[0]).toEqual({
+      sessionId: "a",
+      dayId: "day-2",
+      dayLabel: "Pull",
+      startedAt: "2026-07-10T10:00:00.000Z",
+      sets: 1,
+      reps: 8,
+      volume: 80 * 8,
+    });
+  });
+
+  it("merges an exercise's totals across sessions", () => {
+    const a = makeSession({ id: "a", startedAt: "2026-07-10T10:00:00.000Z" });
+    const b = makeSession({
+      id: "b",
+      startedAt: "2026-07-18T10:00:00.000Z",
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet({ id: "set-2", weight: 100, reps: 5 })] },
+      ],
+    });
+
+    expect(exerciseTotals([a, b], "volume")).toEqual([
+      { exercise: "Bench Press", sessions: 2, sets: 2, reps: 8 + 5, volume: 80 * 8 + 100 * 5 },
+    ]);
+  });
+
+  it("sorts by the requested metric with bodyweight sets counting reps but no volume", () => {
+    const session = makeSession({
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet({ weight: 100, reps: 5 })] },
+        { exercise: "Chin-Up", sets: [makeSet({ id: "set-2", weight: 0, reps: 12 })] },
+      ],
+    });
+
+    expect(exerciseTotals([session], "volume").map((t) => t.exercise)).toEqual([
+      "Bench Press",
+      "Chin-Up",
+    ]);
+    expect(exerciseTotals([session], "reps").map((t) => t.exercise)).toEqual([
+      "Chin-Up",
+      "Bench Press",
+    ]);
+    expect(exerciseTotals([session], "reps")[0].volume).toBe(0);
+  });
+
+  it("breaks metric ties by exercise name", () => {
+    const session = makeSession({
+      entries: [
+        { exercise: "Squat", sets: [makeSet()] },
+        { exercise: "Bench Press", sets: [makeSet({ id: "set-2" })] },
+      ],
+    });
+
+    expect(exerciseTotals([session], "volume").map((t) => t.exercise)).toEqual([
+      "Bench Press",
+      "Squat",
+    ]);
+  });
+
+  it("ignores entries without sets", () => {
+    const session = makeSession({
+      entries: [{ exercise: "Bench Press", sets: [] }],
+    });
+
+    expect(exerciseTotals([session], "volume")).toEqual([]);
+  });
+
+  it("returns one chronological point per session that logged the exercise", () => {
+    const newer = makeSession({ id: "b", startedAt: "2026-07-18T10:00:00.000Z" });
+    const older = makeSession({ id: "a", startedAt: "2026-07-10T10:00:00.000Z" });
+    const unrelated = makeSession({
+      id: "c",
+      startedAt: "2026-07-14T10:00:00.000Z",
+      entries: [{ exercise: "Squat", sets: [makeSet()] }],
+    });
+
+    const result = exerciseSeries([newer, unrelated, older], "Bench Press");
+
+    expect(result.map((p) => p.sessionId)).toEqual(["a", "b"]);
+    expect(result[0]).toEqual({
+      sessionId: "a",
+      dayLabel: "Push",
+      startedAt: "2026-07-10T10:00:00.000Z",
+      sets: 1,
+      reps: 8,
+      volume: 80 * 8,
+    });
+  });
+
+  it("sums duplicate entries for the exercise within a session", () => {
+    // Mirrors the lastEntryForExercise regression: stored sessions may hold
+    // several entries for the same exercise.
+    const session = makeSession({
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet({ weight: 80, reps: 8 })] },
+        { exercise: "Bench Press", sets: [makeSet({ id: "set-2", weight: 100, reps: 5 })] },
+      ],
+    });
+
+    const result = exerciseSeries([session], "Bench Press");
+
+    expect(result).toHaveLength(1);
+    expect(result[0].sets).toBe(2);
+    expect(result[0].volume).toBe(80 * 8 + 100 * 5);
+  });
+
+  it("returns an empty series for an unlogged exercise", () => {
+    expect(exerciseSeries([makeSession()], "Deadlift")).toEqual([]);
   });
 });
 
