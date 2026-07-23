@@ -56,7 +56,7 @@ The whole app SSR-prerenders, so anything derived from `localStorage` must be ga
 ### Styling
 
 - **Tailwind CSS v4** (CSS-first; configured via `@import 'tailwindcss'` in `app/globals.css`, no `tailwind.config`). PostCSS plugin in `postcss.config.mjs`.
-- **shadcn is configured but not vendored**: `components.json` (style `base-nova`, on `@base-ui/react` rather than Radix) exists for `pnpm dlx shadcn add …`, which would place components in `components/ui/` and add their dependencies. No shadcn component or dependency is currently in the tree — all UI is hand-written with Tailwind.
+- **shadcn components live in `components/ui/`**: `components.json` (style `base-nova`, on `@base-ui/react` rather than Radix) drives `pnpm dlx shadcn add …`. Vendored so far: `button`, `popover`, `calendar` (the date-range filter; deps `@base-ui/react`, `react-day-picker`, `date-fns`, `class-variance-authority`). Note the CLI may skip adding peer deps like `@base-ui/react` to `package.json` — check `pnpm typecheck` after adding. Vendored files keep upstream style: `.oxlintrc.json` has a `components/ui/**` override silencing `no-shadow` and `react/no-unstable-nested-components`. Everything else is hand-written with Tailwind.
 - Theme is driven by CSS custom properties (`--primary`, `--card`, `--muted-foreground`, etc.) defined in `globals.css` and exposed to Tailwind via `@theme inline`. Use the semantic token classes (`bg-primary`, `text-muted-foreground`, …) rather than raw colors.
 - Merge class names with `cn()` from `lib/utils.ts`. Icons come from `lucide-react`.
 - Import via the `@/*` alias (maps to the project root).
