@@ -28,7 +28,7 @@ import {
   formatDate,
   formatSessionDate,
 } from "@/lib/sessions";
-import { useSetSearchParam } from "@/lib/use-set-search-param";
+import { useSetSearchParams } from "@/lib/use-set-search-params";
 import { workouts } from "@/lib/workouts";
 
 function ExerciseTooltip({ active, payload }: TooltipContentProps) {
@@ -55,7 +55,7 @@ export function ExerciseTrendChart({
   metric: StatsMetric;
 }) {
   const searchParams = useSearchParams();
-  const setSearchParam = useSetSearchParam();
+  const setSearchParams = useSetSearchParams();
 
   // Logged exercises no longer in the plan stay selectable under "Other";
   // `selectable` also guards the URL param against unknown names.
@@ -84,7 +84,7 @@ export function ExerciseTrendChart({
         </span>
         <select
           value={exercise}
-          onChange={(e) => setSearchParam("exercise", e.target.value)}
+          onChange={(e) => setSearchParams({ exercise: e.target.value })}
           className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {workouts.map((day) => (

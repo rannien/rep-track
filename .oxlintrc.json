@@ -10,6 +10,15 @@
     "react/react-in-jsx-scope": "off",
     "import/no-unassigned-import": "off"
   },
+  "overrides": [
+    {
+      "files": ["components/ui/**"],
+      "rules": {
+        "no-shadow": "off",
+        "react/no-unstable-nested-components": "off"
+      }
+    }
+  ],
   "env": {
     "browser": true,
     "es2024": true,

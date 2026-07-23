@@ -3,13 +3,21 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { DateRangeFilter } from "@/components/date-range-filter";
 import { ExerciseTotalsChart } from "@/components/exercise-totals-chart";
 import { ExerciseTrendChart } from "@/components/exercise-trend-chart";
 import { MetricToggle } from "@/components/metric-toggle";
 import { SessionTrendChart } from "@/components/session-trend-chart";
 import { useSessions } from "@/components/session-provider";
-import { type StatsMetric, exerciseTotals, sessionSeries, totalStats } from "@/lib/sessions";
-import { useSetSearchParam } from "@/lib/use-set-search-param";
+import {
+  type StatsMetric,
+  exerciseTotals,
+  filterSessionsByDateRange,
+  parseDateKeyParam,
+  sessionSeries,
+  totalStats,
+} from "@/lib/sessions";
+import { useSetSearchParams } from "@/lib/use-set-search-params";
 import { CalendarCheck, CalendarPlus, Dumbbell, Layers, Repeat } from "lucide-react";
 
 // Doubles as the Suspense fallback on /stats (useSearchParams suspends during
@@ -31,18 +39,30 @@ export function SessionStatsSkeleton() {
 
 export function SessionStats() {
   const { hydrated, sessions } = useSessions();
-  // The metric lives in the URL so reload and back/forward reproduce the view;
-  // anything but the literal "reps" falls back to the default.
+  // View state (metric + date range) lives in the URL so reload and
+  // back/forward reproduce it; anything invalid falls back to the default.
   const searchParams = useSearchParams();
-  const setSearchParam = useSetSearchParam();
+  const setSearchParams = useSetSearchParams();
   const metric: StatsMetric = searchParams.get("metric") === "reps" ? "reps" : "volume";
 
-  const totals = useMemo(() => totalStats(sessions), [sessions]);
-  const trend = useMemo(() => sessionSeries(sessions), [sessions]);
-  const perExercise = useMemo(() => exerciseTotals(sessions, metric), [sessions, metric]);
+  // A hand-edited URL may invert the bounds; reading them swapped keeps the
+  // inputs and the filter consistent.
+  const fromParam = parseDateKeyParam(searchParams.get("from"));
+  const toParam = parseDateKeyParam(searchParams.get("to"));
+  const inverted = fromParam !== null && toParam !== null && fromParam > toParam;
+  const from = inverted ? toParam : fromParam;
+  const to = inverted ? fromParam : toParam;
+
+  const filtered = useMemo(
+    () => filterSessionsByDateRange(sessions, from, to),
+    [sessions, from, to],
+  );
+  const totals = useMemo(() => totalStats(filtered), [filtered]);
+  const trend = useMemo(() => sessionSeries(filtered), [filtered]);
+  const perExercise = useMemo(() => exerciseTotals(filtered, metric), [filtered, metric]);
   const hasBodyweightSets = useMemo(
-    () => sessions.some((s) => s.entries.some((e) => e.sets.some((set) => set.weight === 0))),
-    [sessions],
+    () => filtered.some((s) => s.entries.some((e) => e.sets.some((set) => set.weight === 0))),
+    [filtered],
   );
 
   // Same hydration gate as SessionHistory: nothing localStorage-derived until
@@ -65,6 +85,17 @@ export function SessionStats() {
     );
   }
 
+  if (filtered.length === 0) {
+    return (
+      <div className="flex flex-col gap-4 sm:gap-6">
+        <DateRangeFilter from={from} to={to} sessions={sessions} />
+        <p className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+          No sessions in this date range — widen it or switch back to all time.
+        </p>
+      </div>
+    );
+  }
+
   const tiles = [
     { label: "Sessions", value: totals.sessions.toLocaleString(), icon: CalendarCheck },
     { label: "Sets", value: totals.sets.toLocaleString(), icon: Layers },
@@ -78,6 +109,8 @@ export function SessionStats() {
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6">
+      <DateRangeFilter from={from} to={to} sessions={sessions} />
+
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         {tiles.map(({ label, value, icon: Icon }) => (
           <div
@@ -94,7 +127,7 @@ export function SessionStats() {
       </dl>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <MetricToggle value={metric} onChange={(next) => setSearchParam("metric", next)} />
+        <MetricToggle value={metric} onChange={(next) => setSearchParams({ metric: next })} />
         {metric === "volume" && hasBodyweightSets && (
           <p className="text-xs text-muted-foreground">
             Sets logged without a weight count as 0 kg volume — switch to Reps to compare them.
@@ -116,7 +149,7 @@ export function SessionStats() {
 
       <section className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
         <h2 className="text-sm font-semibold text-card-foreground">Exercise over time</h2>
-        <ExerciseTrendChart sessions={sessions} metric={metric} />
+        <ExerciseTrendChart sessions={filtered} metric={metric} />
       </section>
     </div>
   );
