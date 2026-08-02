@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DataControls } from "@/components/data-controls";
 import { SessionHistory } from "@/components/session-history";
 import { ArrowLeft, ChartColumn } from "lucide-react";
 
@@ -30,6 +31,10 @@ export default function HistoryPage() {
           you hit for each exercise.
         </p>
       </header>
+
+      <div className="mb-6 sm:mb-8">
+        <DataControls />
+      </div>
 
       <SessionHistory />
     </main>

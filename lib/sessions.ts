@@ -89,6 +89,21 @@ export type ParsedSessions =
   | { kind: "partial"; sessions: Session[]; dropped: number }
   | { kind: "corrupt"; sessions: Session[] }; // sessions is always [] here
 
+// Validate an already-parsed value as a sessions array. Invalid sessions are
+// dropped individually, so one bad element doesn't cost the whole history.
+// Shared by the localStorage load and the backup import so both go through the
+// exact same trust-boundary validation.
+export function parseSessionsArray(parsed: unknown): ParsedSessions {
+  if (!Array.isArray(parsed)) return { kind: "corrupt", sessions: [] };
+  const sessions: Session[] = [];
+  for (const candidate of parsed) {
+    const session = parseSession(candidate);
+    if (session) sessions.push(session);
+  }
+  const dropped = parsed.length - sessions.length;
+  return dropped > 0 ? { kind: "partial", sessions, dropped } : { kind: "ok", sessions };
+}
+
 // Validate a raw sessions payload. Invalid sessions are dropped individually,
 // so one bad element doesn't cost the whole history.
 export function parseSessionsBlob(raw: string | null): ParsedSessions {
@@ -99,14 +114,7 @@ export function parseSessionsBlob(raw: string | null): ParsedSessions {
   } catch {
     return { kind: "corrupt", sessions: [] };
   }
-  if (!Array.isArray(parsed)) return { kind: "corrupt", sessions: [] };
-  const sessions: Session[] = [];
-  for (const candidate of parsed) {
-    const session = parseSession(candidate);
-    if (session) sessions.push(session);
-  }
-  const dropped = parsed.length - sessions.length;
-  return dropped > 0 ? { kind: "partial", sessions, dropped } : { kind: "ok", sessions };
+  return parseSessionsArray(parsed);
 }
 
 export type LoadSessionsResult = ParsedSessions & { backedUp: boolean };

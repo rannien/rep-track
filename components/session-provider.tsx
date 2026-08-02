@@ -35,6 +35,8 @@ type SessionContextValue = {
   /** Append a set to today's session, creating the session/entry as needed. */
   addSet: (day: DayRef, exercise: string, set: { reps: number; weight: number }) => void;
   removeSet: (sessionId: string, exercise: string, setId: string) => void;
+  /** Overwrite the whole history — the apply step of a backup import. */
+  replaceAllSessions: (sessions: Session[]) => void;
   /** Set while persistence is degraded; drives the storage banner. */
   storageWarning: StorageWarning | null;
 };
@@ -61,6 +63,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // Same hydration-safe pattern as the rest of the app: read on mount, write
   // only after hydration so we never touch `window` during SSR.
   useEffect(() => {
+    // Ask the browser to exempt our data from best-effort eviction (Safari's
+    // tracking prevention deletes script storage after 7 idle days; others
+    // evict LRU under pressure). Best-effort itself — a denial or missing API
+    // needs no user action, since export/import is the real safety net.
+    if (navigator.storage?.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
+
     const result = loadSessions();
     lastSavedRef.current = result.sessions;
     setSessions(result.sessions);
@@ -155,6 +165,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  // The apply step of a backup import; the caller has already validated and
+  // (for a merge) combined the sessions. Replacing the array diverges it from
+  // lastSavedRef, so the save effect persists it like any other mutation.
+  const replaceAllSessions = useCallback((next: Session[]) => {
+    setSessions(next);
+  }, []);
+
   const removeSet = useCallback((sessionId: string, exercise: string, setId: string) => {
     setSessions((prev) =>
       prev
@@ -175,8 +192,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ hydrated, sessions, todaySession, addSet, removeSet, storageWarning }),
-    [hydrated, sessions, todaySession, addSet, removeSet, storageWarning],
+    () => ({
+      hydrated,
+      sessions,
+      todaySession,
+      addSet,
+      removeSet,
+      replaceAllSessions,
+      storageWarning,
+    }),
+    [hydrated, sessions, todaySession, addSet, removeSet, replaceAllSessions, storageWarning],
   );
 
   return (
