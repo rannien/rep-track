@@ -1,7 +1,8 @@
 import { Analytics } from "@vercel/analytics/next";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { RestTimerProvider } from "@/components/rest-timer-provider";
+import { ServiceWorkerRegistrar } from "@/components/service-worker";
 import { SessionProvider } from "@/components/session-provider";
 import "./globals.css";
 
@@ -25,6 +26,17 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-icon.png",
   },
+  appleWebApp: {
+    // iOS home-screen launch: chrome-less, matching the standalone manifest.
+    capable: true,
+    title: "Rep Track",
+    statusBarStyle: "default",
+  },
+};
+
+// The indigo brand tile also tints the mobile status bar / installed title bar.
+export const viewport: Viewport = {
+  themeColor: "#4b50d5",
 };
 
 export default function RootLayout({
@@ -38,6 +50,7 @@ export default function RootLayout({
         <SessionProvider>
           <RestTimerProvider>{children}</RestTimerProvider>
         </SessionProvider>
+        <ServiceWorkerRegistrar />
         {/* Dev-safe unconditionally: @vercel/analytics runs in debug mode
             outside production and sends nothing. */}
         <Analytics />
