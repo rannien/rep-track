@@ -149,7 +149,8 @@ export function SessionStats() {
 
       <section className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
         <h2 className="text-sm font-semibold text-card-foreground">Exercise over time</h2>
-        <ExerciseTrendChart sessions={filtered} metric={metric} />
+        {/* Owns its own metric (adds Est. 1RM), so it doesn't take the page toggle. */}
+        <ExerciseTrendChart sessions={filtered} />
       </section>
     </div>
   );

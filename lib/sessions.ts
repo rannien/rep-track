@@ -186,6 +186,23 @@ export function entryVolume(entry: ExerciseEntry): number {
   return entry.sets.reduce((sum, set) => sum + set.weight * set.reps, 0);
 }
 
+// Estimated one-rep max via the Epley formula: w × (1 + reps/30). A well-
+// established estimate — accurate enough to track progression as a trend, and
+// it needs no hardware beyond the weight+reps already logged. A bodyweight set
+// (weight 0) has no external load to extrapolate, so it yields 0; a single rep
+// returns the weight itself. Rounded to 0.1 kg so values compare cleanly.
+export function estimatedOneRepMax(set: { weight: number; reps: number }): number {
+  if (set.weight <= 0 || set.reps <= 0) return 0;
+  // A single rep is already a 1RM — Epley only extrapolates multi-rep sets.
+  if (set.reps === 1) return set.weight;
+  return Math.round(set.weight * (1 + set.reps / 30) * 10) / 10;
+}
+
+// The highest estimated 1RM across an entry's sets (0 if none qualify).
+export function entryBestOneRepMax(entry: ExerciseEntry): number {
+  return entry.sets.reduce((best, set) => Math.max(best, estimatedOneRepMax(set)), 0);
+}
+
 function entryReps(entry: ExerciseEntry): number {
   return entry.sets.reduce((sum, set) => sum + set.reps, 0);
 }
@@ -337,12 +354,14 @@ export type ExercisePoint = {
   sets: number;
   reps: number;
   volume: number;
+  oneRepMax: number; // best estimated 1RM of that session's sets (0 if bodyweight)
 };
 
 // One exercise's per-session aggregates in chronological order (oldest
 // first) — the shape the exercise trend chart plots. Duplicate entries for
 // the exercise within a session are summed; set-less entries are skipped,
-// matching lastEntryForExercise.
+// matching lastEntryForExercise. oneRepMax is a max, not a sum — it tracks the
+// heaviest estimated 1RM hit that session.
 export function exerciseSeries(sessions: Session[], exercise: string): ExercisePoint[] {
   const points: ExercisePoint[] = [];
   for (const session of sessions) {
@@ -355,13 +374,35 @@ export function exerciseSeries(sessions: Session[], exercise: string): ExerciseP
       sets: 0,
       reps: 0,
       volume: 0,
+      oneRepMax: 0,
     };
     for (const entry of entries) {
       addEntryStats(point, entry);
+      point.oneRepMax = Math.max(point.oneRepMax, entryBestOneRepMax(entry));
     }
     points.push(point);
   }
   return points.toSorted((a, b) => a.startedAt.localeCompare(b.startedAt));
+}
+
+// The best estimated 1RM ever hit for an exercise across the given sessions,
+// optionally excluding the in-progress session — the bar a freshly logged set
+// must clear to count as a personal record. 0 when the exercise has no prior
+// loaded sets.
+export function bestOneRepMaxForExercise(
+  sessions: Session[],
+  exercise: string,
+  excludeSessionId?: string,
+): number {
+  let best = 0;
+  for (const session of sessions) {
+    if (session.id === excludeSessionId) continue;
+    for (const entry of session.entries) {
+      if (entry.exercise !== exercise) continue;
+      best = Math.max(best, entryBestOneRepMax(entry));
+    }
+  }
+  return best;
 }
 
 // Most recent session — excluding the one in progress — that logged this
@@ -401,4 +442,10 @@ export function formatSessionDate(iso: string): string {
 
 export function formatSet(set: { reps: number; weight: number }): string {
   return `${set.weight} kg × ${set.reps}`;
+}
+
+// Estimated 1RM as a compact kg label; drops a trailing ".0" so whole numbers
+// read cleanly ("120 kg", "117.5 kg").
+export function formatOneRepMax(value: number): string {
+  return `${Number(value.toFixed(1)).toLocaleString()} kg`;
 }

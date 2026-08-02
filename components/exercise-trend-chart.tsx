@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CartesianGrid,
@@ -26,10 +26,27 @@ import {
   exerciseSeries,
   exerciseTotals,
   formatDate,
+  formatOneRepMax,
   formatSessionDate,
 } from "@/lib/sessions";
 import { useSetSearchParams } from "@/lib/use-set-search-params";
+import { cn } from "@/lib/utils";
 import { workouts } from "@/lib/workouts";
+
+// This chart adds estimated 1RM to volume/reps, so it carries its own metric
+// choice rather than the page-level Volume/Reps toggle — 1RM is the natural
+// default for a per-exercise progression view.
+type ExerciseMetric = StatsMetric | "oneRepMax";
+
+const exerciseMetricOptions: { value: ExerciseMetric; label: string }[] = [
+  { value: "oneRepMax", label: "Est. 1RM" },
+  { value: "volume", label: "Volume" },
+  { value: "reps", label: "Reps" },
+];
+
+function isExerciseMetric(value: string | null): value is ExerciseMetric {
+  return value === "oneRepMax" || value === "volume" || value === "reps";
+}
 
 function ExerciseTooltip({ active, payload }: TooltipContentProps) {
   const point = payload?.[0]?.payload as ExercisePoint | undefined;
@@ -39,23 +56,24 @@ function ExerciseTooltip({ active, payload }: TooltipContentProps) {
       <ChartTooltipRow label="Sets" value={formatCount(point.sets)} />
       <ChartTooltipRow label="Reps" value={formatCount(point.reps)} />
       <ChartTooltipRow label="Volume" value={formatVolume(point.volume)} />
+      {point.oneRepMax > 0 && (
+        <ChartTooltipRow label="Est. 1RM" value={formatOneRepMax(point.oneRepMax)} />
+      )}
     </ChartTooltipFrame>
   );
 }
 
-// One exercise's per-session trend — the progressive-overload view. The
-// selection lives in the URL (?exercise=…) so reload and back/forward
-// reproduce it; only rendered with hydrated, non-empty session data, so the
-// top-volume default can be computed from it.
-export function ExerciseTrendChart({
-  sessions,
-  metric,
-}: {
-  sessions: Session[];
-  metric: StatsMetric;
-}) {
+// One exercise's per-session trend — the progressive-overload view. Both the
+// exercise (?exercise=…) and the metric (?exmetric=…) live in the URL so
+// reload and back/forward reproduce it; only rendered with hydrated, non-empty
+// session data, so the top-volume default can be computed from it.
+export function ExerciseTrendChart({ sessions }: { sessions: Session[] }) {
   const searchParams = useSearchParams();
   const setSearchParams = useSetSearchParams();
+  const metricName = useId();
+
+  const exMetricParam = searchParams.get("exmetric");
+  const metric: ExerciseMetric = isExerciseMetric(exMetricParam) ? exMetricParam : "oneRepMax";
 
   // Logged exercises no longer in the plan stay selectable under "Other";
   // `selectable` also guards the URL param against unknown names.
@@ -78,35 +96,62 @@ export function ExerciseTrendChart({
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="flex w-fit flex-col gap-1">
-        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Exercise
-        </span>
-        <select
-          value={exercise}
-          onChange={(e) => setSearchParams({ exercise: e.target.value })}
-          className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {workouts.map((day) => (
-            <optgroup key={day.id} label={day.label}>
-              {day.exercises.map((ex) => (
-                <option key={ex.name} value={ex.name}>
-                  {ex.name}
-                </option>
-              ))}
-            </optgroup>
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+        <label className="flex w-fit flex-col gap-1">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Exercise
+          </span>
+          <select
+            value={exercise}
+            onChange={(e) => setSearchParams({ exercise: e.target.value })}
+            className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {workouts.map((day) => (
+              <optgroup key={day.id} label={day.label}>
+                {day.exercises.map((ex) => (
+                  <option key={ex.name} value={ex.name}>
+                    {ex.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+            {unplanned.length > 0 && (
+              <optgroup label="Other">
+                {unplanned.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+        </label>
+
+        <fieldset className="inline-flex w-fit items-center rounded-full border border-border bg-secondary p-0.5">
+          <legend className="sr-only">Exercise chart metric</legend>
+          {exerciseMetricOptions.map((option) => (
+            <label
+              key={option.value}
+              className={cn(
+                "cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring",
+                metric === option.value
+                  ? "bg-card text-card-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <input
+                type="radio"
+                name={metricName}
+                value={option.value}
+                checked={metric === option.value}
+                onChange={() => setSearchParams({ exmetric: option.value })}
+                className="sr-only"
+              />
+              {option.label}
+            </label>
           ))}
-          {unplanned.length > 0 && (
-            <optgroup label="Other">
-              {unplanned.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-      </label>
+        </fieldset>
+      </div>
 
       {points.length === 0 ? (
         <p className="flex h-64 items-center justify-center rounded-xl border border-dashed border-border px-4 text-center text-sm text-muted-foreground sm:h-72">

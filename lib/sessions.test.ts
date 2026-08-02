@@ -2,14 +2,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type LoggedSet,
   type Session,
+  bestOneRepMaxForExercise,
+  entryBestOneRepMax,
   entryVolume,
   dateKeyToDate,
   dateToDateKey,
+  estimatedOneRepMax,
   exerciseSeries,
   exerciseTotals,
   filterSessionsByDateRange,
   formatDate,
   formatDateKey,
+  formatOneRepMax,
   formatSet,
   lastEntryForExercise,
   parseDateKeyParam,
@@ -169,6 +173,53 @@ describe("session aggregation", () => {
   });
 });
 
+describe("estimated 1RM & personal records", () => {
+  it("estimates 1RM via Epley, rounded to 0.1 kg", () => {
+    expect(estimatedOneRepMax({ weight: 100, reps: 1 })).toBe(100);
+    expect(estimatedOneRepMax({ weight: 80, reps: 8 })).toBe(101.3); // 80 × (1 + 8/30)
+    expect(estimatedOneRepMax({ weight: 100, reps: 5 })).toBe(116.7);
+  });
+
+  it("treats a bodyweight or empty set as having no estimable 1RM", () => {
+    expect(estimatedOneRepMax({ weight: 0, reps: 12 })).toBe(0);
+    expect(estimatedOneRepMax({ weight: 80, reps: 0 })).toBe(0);
+  });
+
+  it("takes the heaviest estimate across an entry's sets", () => {
+    const entry = {
+      exercise: "Bench Press",
+      sets: [makeSet({ weight: 80, reps: 8 }), makeSet({ id: "s2", weight: 100, reps: 5 })],
+    };
+
+    expect(entryBestOneRepMax(entry)).toBe(116.7); // the 100 × 5 set wins
+  });
+
+  it("finds the best prior 1RM for an exercise, excluding the in-progress session", () => {
+    const older = makeSession({
+      id: "a",
+      startedAt: "2026-07-10T10:00:00.000Z",
+      entries: [{ exercise: "Bench Press", sets: [makeSet({ weight: 100, reps: 5 })] }],
+    });
+    const inProgress = makeSession({
+      id: "b",
+      startedAt: "2026-07-18T10:00:00.000Z",
+      entries: [{ exercise: "Bench Press", sets: [makeSet({ weight: 120, reps: 3 })] }],
+    });
+
+    expect(bestOneRepMaxForExercise([older, inProgress], "Bench Press")).toBe(132); // 120×3
+    expect(bestOneRepMaxForExercise([older, inProgress], "Bench Press", "b")).toBe(116.7); // 100×5
+  });
+
+  it("returns 0 for an exercise with no loaded history", () => {
+    expect(bestOneRepMaxForExercise([makeSession()], "Deadlift")).toBe(0);
+  });
+
+  it("formats a 1RM as kg, dropping a trailing .0", () => {
+    expect(formatOneRepMax(120)).toBe("120 kg");
+    expect(formatOneRepMax(117.5)).toBe("117.5 kg");
+  });
+});
+
 describe("chart series", () => {
   it("returns zero totals for an empty history", () => {
     expect(totalStats([])).toEqual({ sessions: 0, sets: 0, reps: 0, volume: 0 });
@@ -287,6 +338,7 @@ describe("chart series", () => {
       sets: 1,
       reps: 8,
       volume: 80 * 8,
+      oneRepMax: 101.3, // 80 × (1 + 8/30)
     });
   });
 

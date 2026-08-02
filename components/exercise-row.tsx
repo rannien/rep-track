@@ -6,13 +6,16 @@ import { MovementBadge, MuscleBadge } from "@/components/badges";
 import { useExercisePanel } from "@/components/exercise-panel-provider";
 import { useSessions } from "@/components/session-provider";
 import {
+  bestOneRepMaxForExercise,
+  entryBestOneRepMax,
   formatDate,
+  formatOneRepMax,
   formatSet,
   lastEntryForExercise,
   parseRepsInput,
   parseWeightInput,
 } from "@/lib/sessions";
-import { Play, Plus, Dumbbell, Trash2, Check, History } from "lucide-react";
+import { Play, Plus, Dumbbell, Trash2, Check, History, Trophy, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Scroll the row above the on-screen keyboard. window.innerHeight ignores the
@@ -55,6 +58,18 @@ export function ExerciseRow({
     () => lastEntryForExercise(sessions, exercise.name, session?.id),
     [sessions, exercise.name, session?.id],
   );
+
+  // Estimated-1RM progression: the best from every prior session (the bar to
+  // beat) vs. the best of today's sets. Beating it marks a personal record.
+  const priorBest = useMemo(
+    () => bestOneRepMaxForExercise(sessions, exercise.name, session?.id),
+    [sessions, exercise.name, session?.id],
+  );
+  const todayBest = entryBestOneRepMax({ exercise: exercise.name, sets: todaysSets });
+  // Only celebrate beating an established best — the first-ever entry sets the
+  // baseline silently rather than firing a hollow PR on every new exercise.
+  const isPR = priorBest > 0 && todayBest > priorBest;
+  const currentBest = Math.max(priorBest, todayBest);
 
   // The set you're about to log, and what you did for that same set last time.
   const nextSetNumber = todaysSets.length + 1;
@@ -125,6 +140,12 @@ export function ExerciseRow({
                 {todaysSets.length} {todaysSets.length === 1 ? "set today" : "sets today"}
               </span>
             ) : null}
+            {hydrated && isPR ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                <Trophy className="size-3" aria-hidden="true" />
+                New PR · {formatOneRepMax(todayBest)}
+              </span>
+            ) : null}
           </div>
           {hydrated && last ? (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -182,6 +203,19 @@ export function ExerciseRow({
       >
         <div className="overflow-hidden">
           <div className="mt-3 flex flex-col gap-3 rounded-xl border border-border bg-secondary/30 p-3">
+            {/* Standing estimated 1RM benchmark for this exercise */}
+            {hydrated && currentBest > 0 ? (
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <TrendingUp className="size-3.5 text-primary" aria-hidden="true" />
+                  Best est. 1RM
+                </span>
+                <span className="font-semibold tabular-nums text-card-foreground">
+                  {formatOneRepMax(currentBest)}
+                </span>
+              </div>
+            ) : null}
+
             {/* Sets logged in today's session */}
             {hydrated && todaysSets.length > 0 ? (
               <ul className="flex flex-col gap-1.5">
