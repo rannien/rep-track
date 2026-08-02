@@ -1,6 +1,7 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { RestTimerProvider } from "@/components/rest-timer-provider";
 import { SessionProvider } from "@/components/session-provider";
 import "./globals.css";
 
@@ -34,7 +35,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} bg-background`}>
       <body className="font-sans antialiased">
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <RestTimerProvider>{children}</RestTimerProvider>
+        </SessionProvider>
         {/* Dev-safe unconditionally: @vercel/analytics runs in debug mode
             outside production and sends nothing. */}
         <Analytics />

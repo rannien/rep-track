@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import type { Exercise } from "@/lib/workouts";
 import { MovementBadge, MuscleBadge } from "@/components/badges";
 import { useExercisePanel } from "@/components/exercise-panel-provider";
+import { useRestTimer } from "@/components/rest-timer-provider";
 import { useSessions } from "@/components/session-provider";
 import {
   bestOneRepMaxForExercise,
@@ -42,6 +43,7 @@ export function ExerciseRow({
   dayLabel: string;
 }) {
   const { hydrated, sessions, todaySession, addSet, removeSet } = useSessions();
+  const { start: startRest } = useRestTimer();
   const { openPanel, setOpenPanel } = useExercisePanel();
   const panelKey = `${dayId}:${exercise.name}`;
   const open = openPanel === panelKey;
@@ -106,6 +108,9 @@ export function ExerciseRow({
       reps: repsValue,
       weight: weightValue,
     });
+    // Kick off the rest countdown from the same tap that logs the set — this is
+    // the user gesture the completion beep needs to satisfy autoplay policy.
+    startRest();
     setReps(String(repsValue));
     setWeight("");
     weightInputRef.current?.focus();
