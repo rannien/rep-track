@@ -1,6 +1,7 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { DataControls } from "@/components/data-controls";
-import { SessionHistory } from "@/components/session-history";
+import { SessionHistory, SessionHistorySkeleton } from "@/components/session-history";
 import { ArrowLeft, ChartColumn } from "lucide-react";
 
 export default function HistoryPage() {
@@ -36,7 +37,11 @@ export default function HistoryPage() {
         <DataControls />
       </div>
 
-      <SessionHistory />
+      {/* useSearchParams (the day filter) suspends during the static
+          prerender, so the history list needs its own boundary. */}
+      <Suspense fallback={<SessionHistorySkeleton />}>
+        <SessionHistory />
+      </Suspense>
     </main>
   );
 }

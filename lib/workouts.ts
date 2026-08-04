@@ -138,3 +138,19 @@ export const movementLabels: Record<Movement, string> = {
   hinge: "Hinge",
   squat: "Squat",
 };
+
+// Distinct training days across logged items (sessions, chart points), plan
+// days first in plan order, then days whose id is no longer in the plan in
+// encounter order. Drives the trend-chart legend and the history day filter.
+export function distinctDays(items: { dayId: string; dayLabel: string }[]): {
+  id: string;
+  label: string;
+}[] {
+  const present = new Map(items.map((item) => [item.dayId, item.dayLabel]));
+  const days: { id: string; label: string }[] = [];
+  for (const day of workouts) {
+    if (present.delete(day.id)) days.push({ id: day.id, label: day.label });
+  }
+  for (const [id, label] of present) days.push({ id, label });
+  return days;
+}

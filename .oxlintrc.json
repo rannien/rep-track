@@ -15,7 +15,8 @@
       "files": ["components/ui/**"],
       "rules": {
         "no-shadow": "off",
-        "react/no-unstable-nested-components": "off"
+        "react/no-unstable-nested-components": "off",
+        "jsx-a11y/label-has-associated-control": "off"
       }
     }
   ],

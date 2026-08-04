@@ -20,7 +20,7 @@ import {
   formatVolume,
 } from "@/components/chart-chrome";
 import { type SessionPoint, type StatsMetric, formatDate, formatSessionDate } from "@/lib/sessions";
-import { workouts } from "@/lib/workouts";
+import { distinctDays, workouts } from "@/lib/workouts";
 
 // Chart slots follow the plan's day order so a day keeps its color no matter
 // which sessions are in view; dayIds outside the current plan share the last
@@ -31,18 +31,6 @@ const dayColors = new Map(workouts.map((day, i) => [day.id, `var(--chart-${i + 1
 
 function dayColor(dayId: string): string {
   return dayColors.get(dayId) ?? "var(--chart-5)";
-}
-
-// Days present in the data, in plan order, unknown historical days last —
-// drives the legend.
-function daysInData(data: SessionPoint[]): { id: string; label: string }[] {
-  const present = new Map(data.map((p) => [p.dayId, p.dayLabel]));
-  const days: { id: string; label: string }[] = [];
-  for (const day of workouts) {
-    if (present.delete(day.id)) days.push({ id: day.id, label: day.label });
-  }
-  for (const [id, label] of present) days.push({ id, label });
-  return days;
 }
 
 function TrendTooltip({ active, payload }: TooltipContentProps) {
@@ -66,7 +54,7 @@ function TrendTooltip({ active, payload }: TooltipContentProps) {
 
 // One bar per logged session, colored by training day.
 export function SessionTrendChart({ data, metric }: { data: SessionPoint[]; metric: StatsMetric }) {
-  const days = daysInData(data);
+  const days = distinctDays(data);
 
   return (
     <div className="flex flex-col gap-2">

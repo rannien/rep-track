@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { workouts } from "./workouts";
+import { distinctDays, workouts } from "./workouts";
 
 // The plan is hand-edited data, and parts of it act as identifiers: day ids
 // key sessions, and an exercise's *name* is the join key between the plan and
@@ -51,5 +51,35 @@ describe("workout plan data integrity", () => {
         expect(exercise.youtube).toMatch(/^https:\/\/www\.youtube\.com\//);
       }
     }
+  });
+});
+
+describe("distinctDays", () => {
+  it("dedupes and orders plan days by plan order, not encounter order", () => {
+    const reversed = workouts.toReversed().flatMap((day) => [
+      { dayId: day.id, dayLabel: day.label },
+      { dayId: day.id, dayLabel: day.label },
+    ]);
+
+    expect(distinctDays(reversed)).toEqual(
+      workouts.map((day) => ({ id: day.id, label: day.label })),
+    );
+  });
+
+  it("appends days no longer in the plan after plan days", () => {
+    const planDay = workouts[0];
+    const items = [
+      { dayId: "day-retired", dayLabel: "Old Split" },
+      { dayId: planDay.id, dayLabel: planDay.label },
+    ];
+
+    expect(distinctDays(items)).toEqual([
+      { id: planDay.id, label: planDay.label },
+      { id: "day-retired", label: "Old Split" },
+    ]);
+  });
+
+  it("returns no days for no items", () => {
+    expect(distinctDays([])).toEqual([]);
   });
 });
