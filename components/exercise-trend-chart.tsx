@@ -19,6 +19,16 @@ import {
   formatCount,
   formatVolume,
 } from "@/components/chart-chrome";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   type ExercisePoint,
   type Session,
@@ -71,6 +81,7 @@ export function ExerciseTrendChart({ sessions }: { sessions: Session[] }) {
   const searchParams = useSearchParams();
   const setSearchParams = useSetSearchParams();
   const metricName = useId();
+  const exerciseSelectId = useId();
 
   const exMetricParam = searchParams.get("exmetric");
   const metric: ExerciseMetric = isExerciseMetric(exMetricParam) ? exMetricParam : "oneRepMax";
@@ -97,35 +108,43 @@ export function ExerciseTrendChart({ sessions }: { sessions: Session[] }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-        <label className="flex w-fit flex-col gap-1">
-          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            Exercise
-          </span>
-          <select
-            value={exercise}
-            onChange={(e) => setSearchParams({ exercise: e.target.value })}
-            className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <div className="flex w-fit max-w-full flex-col gap-1">
+          <Label
+            htmlFor={exerciseSelectId}
+            className="text-[10px] uppercase tracking-wide text-muted-foreground"
           >
-            {workouts.map((day) => (
-              <optgroup key={day.id} label={day.label}>
-                {day.exercises.map((ex) => (
-                  <option key={ex.name} value={ex.name}>
-                    {ex.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-            {unplanned.length > 0 && (
-              <optgroup label="Other">
-                {unplanned.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </select>
-        </label>
+            Exercise
+          </Label>
+          {/* Exercise names double as values, so SelectValue can render the
+              raw value without an items map. */}
+          <Select value={exercise} onValueChange={(name) => setSearchParams({ exercise: name })}>
+            <SelectTrigger id={exerciseSelectId} className="max-w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {workouts.map((day) => (
+                <SelectGroup key={day.id}>
+                  <SelectLabel>{day.label}</SelectLabel>
+                  {day.exercises.map((ex) => (
+                    <SelectItem key={ex.name} value={ex.name}>
+                      {ex.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+              {unplanned.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel>Other</SelectLabel>
+                  {unplanned.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
 
         <fieldset className="inline-flex w-fit items-center rounded-full border border-border bg-secondary p-0.5">
           <legend className="sr-only">Exercise chart metric</legend>

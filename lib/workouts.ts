@@ -141,7 +141,7 @@ export const movementLabels: Record<Movement, string> = {
 
 // Distinct training days across logged items (sessions, chart points), plan
 // days first in plan order, then days whose id is no longer in the plan in
-// encounter order. Drives the trend-chart legend and the history day filter.
+// encounter order. Drives the session trend chart's legend.
 export function distinctDays(items: { dayId: string; dayLabel: string }[]): {
   id: string;
   label: string;

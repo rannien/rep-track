@@ -2,16 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useSessions } from "@/components/session-provider";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   type Session,
   entryVolume,
@@ -19,34 +10,22 @@ import {
   formatSet,
   sessionStats,
 } from "@/lib/sessions";
-import { useSetSearchParams } from "@/lib/use-set-search-params";
-import { distinctDays } from "@/lib/workouts";
 import { cn } from "@/lib/utils";
 import { CalendarPlus, ChevronDown } from "lucide-react";
 
-// Doubles as the Suspense fallback on /history (useSearchParams suspends
-// during the static prerender), so it must match the real layout's heights.
-export function SessionHistorySkeleton() {
-  return (
-    <div className="flex flex-col gap-3" aria-hidden="true">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="h-20 animate-pulse rounded-2xl border border-border bg-card" />
-      ))}
-    </div>
-  );
-}
-
 export function SessionHistory() {
   const { hydrated, sessions } = useSessions();
-  // The day filter lives in the URL (same idiom as the stats controls) so
-  // reload and back/forward reproduce it; unknown values fall back to all.
-  const searchParams = useSearchParams();
-  const setSearchParams = useSetSearchParams();
 
   // Same hydration gate as DaySessionSummary: nothing localStorage-derived
   // until mounted, so the server render and first client render match.
   if (!hydrated) {
-    return <SessionHistorySkeleton />;
+    return (
+      <div className="flex flex-col gap-3" aria-hidden="true">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-20 animate-pulse rounded-2xl border border-border bg-card" />
+        ))}
+      </div>
+    );
   }
 
   if (sessions.length === 0) {
@@ -66,51 +45,7 @@ export function SessionHistory() {
   // Most recent first — same ordering idiom as lastEntryForExercise.
   const sorted = sessions.toSorted((a, b) => b.startedAt.localeCompare(a.startedAt));
 
-  // Only day ids actually present are selectable, so the URL param is guarded
-  // against unknown values and a chosen day can never yield an empty list.
-  const days = distinctDays(sorted);
-  const dayParam = searchParams.get("day");
-  const activeDay = days.some((day) => day.id === dayParam) ? dayParam : null;
-  const filtered =
-    activeDay === null ? sorted : sorted.filter((session) => session.dayId === activeDay);
-  const dayItems = [
-    { value: null as string | null, label: "All days" },
-    ...days.map((day) => ({ value: day.id, label: day.label })),
-  ];
-
-  return (
-    <div className="flex flex-col gap-3 sm:gap-4">
-      {days.length > 1 && (
-        <div className="flex w-fit flex-col gap-1">
-          <Label
-            htmlFor="history-day-filter"
-            className="text-[10px] uppercase tracking-wide text-muted-foreground"
-          >
-            Day
-          </Label>
-          <Select
-            items={dayItems}
-            value={activeDay}
-            onValueChange={(day) => setSearchParams({ day })}
-          >
-            <SelectTrigger id="history-day-filter" className="min-w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {dayItems.map((item) => (
-                <SelectItem key={item.value ?? "all"} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-      {/* Keyed by the filter so the most recent session of the new selection
-          starts open instead of keeping a stale openId. */}
-      <SessionList key={activeDay ?? "all"} sessions={filtered} />
-    </div>
-  );
+  return <SessionList sessions={sorted} />;
 }
 
 function SessionList({ sessions }: { sessions: Session[] }) {
