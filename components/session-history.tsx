@@ -10,6 +10,7 @@ import {
   formatSet,
   sessionStats,
 } from "@/lib/sessions";
+import { cn } from "@/lib/utils";
 import { CalendarPlus, ChevronDown } from "lucide-react";
 
 export function SessionHistory() {
@@ -48,15 +49,10 @@ export function SessionHistory() {
 }
 
 function SessionList({ sessions }: { sessions: Session[] }) {
-  // Controlled <details> as an accordion: at most one session open at a time,
-  // starting with the most recent. Keyed by session id.
+  // Single-open accordion, starting with the most recent session. A button +
+  // animated grid (same smooth grid-template-rows disclosure as the exercise
+  // logging panels) rather than native <details>, which snaps open instantly.
   const [openId, setOpenId] = useState<string | null>(sessions[0].id);
-
-  function toggle(id: string, open: boolean) {
-    // Closing the previous <details> fires its own toggle event with
-    // open=false — the guard keeps it from clearing the newly opened id.
-    setOpenId((prev) => (open ? id : prev === id ? null : prev));
-  }
 
   return (
     <ul className="flex flex-col gap-3 sm:gap-4">
@@ -67,14 +63,18 @@ function SessionList({ sessions }: { sessions: Session[] }) {
           { label: "Reps", value: reps.toLocaleString() },
           { label: "Volume", value: volume > 0 ? `${volume.toLocaleString()} kg` : "—" },
         ];
+        const open = openId === session.id;
+        const panelId = `history-panel-${session.id}`;
         return (
           <li key={session.id}>
-            <details
-              className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
-              open={openId === session.id}
-              onToggle={(e) => toggle(session.id, e.currentTarget.open)}
-            >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:p-5 [&::-webkit-details-marker]:hidden">
+            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <button
+                type="button"
+                aria-expanded={open}
+                aria-controls={panelId}
+                onClick={() => setOpenId((prev) => (prev === session.id ? null : session.id))}
+                className="flex w-full cursor-pointer items-center justify-between gap-3 p-4 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:p-5"
+              >
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="inline-flex w-fit items-center rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">
@@ -96,45 +96,62 @@ function SessionList({ sessions }: { sessions: Session[] }) {
                   </dl>
                 </div>
                 <ChevronDown
-                  className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                  className={cn(
+                    "size-5 shrink-0 text-muted-foreground transition-transform duration-300",
+                    open && "rotate-180",
+                  )}
                   aria-hidden="true"
                 />
-              </summary>
+              </button>
 
-              <ul className="divide-y divide-border border-t border-border">
-                {session.entries.map((entry) => {
-                  const exerciseVolume = entryVolume(entry);
-                  return (
-                    <li key={entry.exercise} className="flex flex-col gap-1.5 px-4 py-3 sm:px-5">
-                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                        <span className="text-sm font-medium text-card-foreground">
-                          {entry.exercise}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          Volume{" "}
-                          <span className="font-semibold tabular-nums text-card-foreground">
-                            {exerciseVolume > 0 ? `${exerciseVolume.toLocaleString()} kg` : "—"}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {entry.sets.map((set, i) => (
-                          <span
-                            key={set.id}
-                            className="inline-flex items-center gap-1.5 rounded-md bg-secondary py-0.5 pl-1 pr-2 text-xs tabular-nums text-secondary-foreground"
-                          >
-                            <span className="inline-flex size-4 items-center justify-center rounded bg-primary/10 text-[10px] font-semibold text-primary">
-                              {i + 1}
+              <div
+                id={panelId}
+                inert={!open}
+                className={cn(
+                  "grid transition-[grid-template-rows] duration-300 ease-in-out",
+                  open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                )}
+              >
+                <div className="overflow-hidden">
+                  <ul className="divide-y divide-border border-t border-border">
+                    {session.entries.map((entry) => {
+                      const exerciseVolume = entryVolume(entry);
+                      return (
+                        <li
+                          key={entry.exercise}
+                          className="flex flex-col gap-1.5 px-4 py-3 sm:px-5"
+                        >
+                          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                            <span className="text-sm font-medium text-card-foreground">
+                              {entry.exercise}
                             </span>
-                            {formatSet(set)}
-                          </span>
-                        ))}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </details>
+                            <span className="text-xs text-muted-foreground">
+                              Volume{" "}
+                              <span className="font-semibold tabular-nums text-card-foreground">
+                                {exerciseVolume > 0 ? `${exerciseVolume.toLocaleString()} kg` : "—"}
+                              </span>
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {entry.sets.map((set, i) => (
+                              <span
+                                key={set.id}
+                                className="inline-flex items-center gap-1.5 rounded-md bg-secondary py-0.5 pl-1 pr-2 text-xs tabular-nums text-secondary-foreground"
+                              >
+                                <span className="inline-flex size-4 items-center justify-center rounded bg-primary/10 text-[10px] font-semibold text-primary">
+                                  {i + 1}
+                                </span>
+                                {formatSet(set)}
+                              </span>
+                            ))}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </div>
+            </div>
           </li>
         );
       })}
