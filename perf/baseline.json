@@ -1,0 +1,20 @@
+{
+  "appVersion": "0.1.0",
+  "recordedAt": "2026-08-04T11:27:15.250Z",
+  "bundle": {
+    "routes": {
+      "/history": {
+        "gzipBytes": 274555,
+        "files": 14
+      },
+      "/": {
+        "gzipBytes": 281475,
+        "files": 14
+      },
+      "/stats": {
+        "gzipBytes": 441649,
+        "files": 15
+      }
+    }
+  }
+}
