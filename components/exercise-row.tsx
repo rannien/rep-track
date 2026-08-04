@@ -8,6 +8,7 @@ import { useRestTimer } from "@/components/rest-timer-provider";
 import { useSessions } from "@/components/session-provider";
 import {
   bestOneRepMaxForExercise,
+  bestOneRepMaxSet,
   entryBestOneRepMax,
   formatDate,
   formatOneRepMax,
@@ -72,6 +73,9 @@ export function ExerciseRow({
   // baseline silently rather than firing a hollow PR on every new exercise.
   const isPR = priorBest > 0 && todayBest > priorBest;
   const currentBest = Math.max(priorBest, todayBest);
+  // The badge shows the set actually lifted (e.g. "100 kg × 8"), not the
+  // extrapolated 1RM — that estimate lives in the tooltip instead.
+  const prSet = isPR ? bestOneRepMaxSet(todaysSets) : null;
 
   // The set you're about to log, and what you did for that same set last time.
   const nextSetNumber = todaysSets.length + 1;
@@ -145,10 +149,13 @@ export function ExerciseRow({
                 {todaysSets.length} {todaysSets.length === 1 ? "set today" : "sets today"}
               </span>
             ) : null}
-            {hydrated && isPR ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+            {hydrated && prSet ? (
+              <span
+                title={`Estimated 1RM ${formatOneRepMax(todayBest)}`}
+                className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400"
+              >
                 <Trophy className="size-3" aria-hidden="true" />
-                New PR · {formatOneRepMax(todayBest)}
+                New PR · {formatSet(prSet)}
               </span>
             ) : null}
           </div>

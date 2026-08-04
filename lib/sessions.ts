@@ -211,6 +211,22 @@ export function entryBestOneRepMax(entry: ExerciseEntry): number {
   return entry.sets.reduce((best, set) => Math.max(best, estimatedOneRepMax(set)), 0);
 }
 
+// The set that produced the highest estimated 1RM (null when none qualify) —
+// the actual logged lift behind a personal record, so the UI can show what was
+// really performed rather than the extrapolated 1RM number.
+export function bestOneRepMaxSet(sets: LoggedSet[]): LoggedSet | null {
+  let best: LoggedSet | null = null;
+  let bestEstimate = 0;
+  for (const set of sets) {
+    const estimate = estimatedOneRepMax(set);
+    if (estimate > bestEstimate) {
+      bestEstimate = estimate;
+      best = set;
+    }
+  }
+  return best;
+}
+
 function entryReps(entry: ExerciseEntry): number {
   return entry.sets.reduce((sum, set) => sum + set.reps, 0);
 }

@@ -3,6 +3,7 @@ import {
   type LoggedSet,
   type Session,
   bestOneRepMaxForExercise,
+  bestOneRepMaxSet,
   entryBestOneRepMax,
   entryVolume,
   dateKeyToDate,
@@ -192,6 +193,18 @@ describe("estimated 1RM & personal records", () => {
     };
 
     expect(entryBestOneRepMax(entry)).toBe(116.7); // the 100 × 5 set wins
+  });
+
+  it("returns the actual set behind the best estimated 1RM", () => {
+    const lighter = makeSet({ id: "a", weight: 80, reps: 8 }); // e1RM 101.3
+    const record = makeSet({ id: "b", weight: 100, reps: 5 }); // e1RM 116.7
+
+    expect(bestOneRepMaxSet([lighter, record])).toEqual(record);
+  });
+
+  it("has no PR set when nothing carries load", () => {
+    expect(bestOneRepMaxSet([makeSet({ weight: 0, reps: 10 })])).toBeNull();
+    expect(bestOneRepMaxSet([])).toBeNull();
   });
 
   it("finds the best prior 1RM for an exercise, excluding the in-progress session", () => {
