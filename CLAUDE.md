@@ -16,13 +16,27 @@ pnpm format         # oxfmt    (writes in place; config: .oxfmtrc.json)
 pnpm format:check   # oxfmt --check
 pnpm typecheck      # tsc --noEmit
 pnpm test           # vitest run
+pnpm perf:bundle    # per-route bundle drift vs perf/baseline.json (after pnpm build)
+pnpm perf:latency   # TTFB p50/p95 smoke against $PERF_BASE_URL (staging/preview)
 ```
 
-**Tests are [vitest](https://vitest.dev) unit tests** covering the pure session
-logic in `lib/sessions.ts` (`lib/sessions.test.ts`): payload validation, "last
-time" lookup, stats aggregation, input parsing, date keying. No config file —
-vitest defaults (node environment) suffice because the tested layer is IO-free.
-Tests import from `"vitest"` explicitly; there is no globals setup.
+**Tests are [vitest](https://vitest.dev) unit tests** covering the pure logic
+in `lib/` (`sessions.test.ts`, `backup.test.ts`, `workouts.test.ts`,
+`rest-timer.test.ts`): payload validation (including hostile/prototype-pollution
+payloads), session mutations (`addSetToSessions`/`removeSetFromSessions`),
+"last time" lookup, stats aggregation, input parsing, date keying, backup
+round-trip/merge, and plan-data invariants. No config file — vitest defaults
+(node environment) suffice because the tested layer is IO-free. Tests import
+from `"vitest"` explicitly; there is no globals setup. Keep component logic
+extractable: pure state transitions live in `lib/`, providers stay thin.
+
+**Performance checks live in `perf/`** (see `perf/README.md`), deliberately
+outside the CI test path: `perf:bundle` compares gzipped per-route first-load
+weight against the versioned `perf/baseline.json` (re-record with `--record`);
+`perf:latency` asserts TTFB percentile budgets from `perf/budgets.json` against
+a deployed preview URL. CI additionally runs `pnpm audit --prod --audit-level
+high` and a gitleaks secrets scan; `pnpm-workspace.yaml` `overrides` keep
+next's transitive `postcss`/`sharp` pins on patched versions.
 
 **Linting/formatting is [oxc](https://oxc.rs), not ESLint/Prettier.** `oxlint` + `oxfmt` replace them — there is no eslint/prettier config or dependency. oxfmt formats with Prettier-compatible defaults (semicolons, double quotes, 80-col). `.oxlintrc.json` disables `react/react-in-jsx-scope` (the automatic JSX runtime makes it moot) and `import/no-unassigned-import` (side-effect CSS imports). The vendored skill under `.claude/` is excluded from oxfmt via `ignorePatterns`.
 
