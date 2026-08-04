@@ -16,8 +16,10 @@ import {
   SESSIONS_KEY,
   type LoggedSet,
   type Session,
+  addSetToSessions,
   loadSessions,
   parseSessionsBlob,
+  removeSetFromSessions,
   saveSessions,
   todayKey,
 } from "@/lib/sessions";
@@ -124,43 +126,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const addSet = useCallback(
     (day: DayRef, exercise: string, set: { reps: number; weight: number }) => {
-      const key = todayKey();
       const newSet: LoggedSet = {
         id: crypto.randomUUID(),
         reps: set.reps,
         weight: set.weight,
       };
-      setSessions((prev) => {
-        // Shallow-copy the touched session and its entries array so React
-        // sees new references along the changed path.
-        const next = prev.slice();
-        let idx = next.findIndex((s) => s.dayId === day.id && s.dateKey === key);
-        let session: Session;
-        if (idx === -1) {
-          session = {
-            id: crypto.randomUUID(),
-            dayId: day.id,
-            dayLabel: day.label,
-            dateKey: key,
-            startedAt: new Date().toISOString(),
-            entries: [],
-          };
-          next.push(session);
-        } else {
-          session = { ...next[idx], entries: next[idx].entries.slice() };
-          next[idx] = session;
-        }
-        const entryIdx = session.entries.findIndex((e) => e.exercise === exercise);
-        if (entryIdx === -1) {
-          session.entries.push({ exercise, sets: [newSet] });
-        } else {
-          session.entries[entryIdx] = {
-            ...session.entries[entryIdx],
-            sets: [...session.entries[entryIdx].sets, newSet],
-          };
-        }
-        return next;
-      });
+      // The session identity is only used if today's session doesn't exist
+      // yet; addSetToSessions ignores it otherwise.
+      const target = {
+        id: crypto.randomUUID(),
+        dayId: day.id,
+        dayLabel: day.label,
+        dateKey: todayKey(),
+        startedAt: new Date().toISOString(),
+      };
+      setSessions((prev) => addSetToSessions(prev, target, exercise, newSet));
     },
     [],
   );
@@ -173,22 +153,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const removeSet = useCallback((sessionId: string, exercise: string, setId: string) => {
-    setSessions((prev) =>
-      prev
-        .map((s) => {
-          if (s.id !== sessionId) return s;
-          const entries = s.entries
-            .map((e) =>
-              e.exercise === exercise
-                ? { ...e, sets: e.sets.filter((set) => set.id !== setId) }
-                : e,
-            )
-            .filter((e) => e.sets.length > 0);
-          return { ...s, entries };
-        })
-        // Drop sessions that no longer hold any sets.
-        .filter((s) => s.entries.length > 0),
-    );
+    setSessions((prev) => removeSetFromSessions(prev, sessionId, exercise, setId));
   }, []);
 
   const value = useMemo(

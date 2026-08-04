@@ -156,6 +156,64 @@ export function saveSessions(sessions: Session[]): SaveSessionsResult {
   }
 }
 
+// The two mutations the logging UI performs, as pure state transitions so the
+// lazy-creation and pruning rules are testable without React. The caller
+// (SessionProvider) supplies ids and timestamps — same convention as
+// serializeBackup's exportedAt.
+
+// Append `set` to the session identified by `target`'s (dayId, dateKey),
+// creating the session and the exercise entry lazily. `target`'s id and
+// startedAt only apply when the session doesn't exist yet. Only the changed
+// path gets new references; untouched sessions keep their identity.
+export function addSetToSessions(
+  sessions: Session[],
+  target: Omit<Session, "entries">,
+  exercise: string,
+  set: LoggedSet,
+): Session[] {
+  const next = sessions.slice();
+  const idx = next.findIndex((s) => s.dayId === target.dayId && s.dateKey === target.dateKey);
+  let session: Session;
+  if (idx === -1) {
+    session = { ...target, entries: [] };
+    next.push(session);
+  } else {
+    session = { ...next[idx], entries: next[idx].entries.slice() };
+    next[idx] = session;
+  }
+  const entryIdx = session.entries.findIndex((e) => e.exercise === exercise);
+  if (entryIdx === -1) {
+    session.entries.push({ exercise, sets: [set] });
+  } else {
+    session.entries[entryIdx] = {
+      ...session.entries[entryIdx],
+      sets: [...session.entries[entryIdx].sets, set],
+    };
+  }
+  return next;
+}
+
+// Drop one logged set, pruning the entry — and then the session — when it
+// empties out, so no view has to render a shell with nothing in it.
+export function removeSetFromSessions(
+  sessions: Session[],
+  sessionId: string,
+  exercise: string,
+  setId: string,
+): Session[] {
+  return sessions
+    .map((s) => {
+      if (s.id !== sessionId) return s;
+      const entries = s.entries
+        .map((e) =>
+          e.exercise === exercise ? { ...e, sets: e.sets.filter((set) => set.id !== setId) } : e,
+        )
+        .filter((e) => e.sets.length > 0);
+      return { ...s, entries };
+    })
+    .filter((s) => s.entries.length > 0);
+}
+
 // Loose sanity bounds for the logging form — cap garbage, not training.
 export const MAX_REPS = 500;
 export const MAX_WEIGHT_KG = 1000;

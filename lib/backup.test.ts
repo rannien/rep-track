@@ -37,6 +37,34 @@ describe("serializeBackup / parseBackup round-trip", () => {
     expect(envelope.version).toBe(BACKUP_VERSION);
     expect(envelope.exportedAt).toBe("2026-07-22T09:00:00.000Z");
   });
+
+  // Leakage guard: the exported file is the only thing that leaves the
+  // browser, so it must carry exactly the session model — nothing else that
+  // happens to live alongside it (other localStorage keys, UI state).
+  it("exports exactly the envelope and session-model fields, nothing more", () => {
+    const envelope = JSON.parse(serializeBackup([makeSession()], "2026-07-22T09:00:00.000Z"));
+
+    expect(Object.keys(envelope).toSorted()).toEqual([
+      "exportedAt",
+      "format",
+      "sessions",
+      "version",
+    ]);
+    expect(Object.keys(envelope.sessions[0]).toSorted()).toEqual([
+      "dateKey",
+      "dayId",
+      "dayLabel",
+      "entries",
+      "id",
+      "startedAt",
+    ]);
+    expect(Object.keys(envelope.sessions[0].entries[0]).toSorted()).toEqual(["exercise", "sets"]);
+    expect(Object.keys(envelope.sessions[0].entries[0].sets[0]).toSorted()).toEqual([
+      "id",
+      "reps",
+      "weight",
+    ]);
+  });
 });
 
 describe("parseBackup", () => {
@@ -61,6 +89,22 @@ describe("parseBackup", () => {
 
   it("reports a payload with no sessions array as corrupt", () => {
     expect(parseBackup('{"format":"rep-track-backup"}')).toEqual({ kind: "corrupt", sessions: [] });
+  });
+
+  it("neutralizes prototype-pollution keys in an imported file", () => {
+    // An imported file is arbitrary external data; hostile keys at either
+    // level must neither survive validation nor touch Object.prototype.
+    const raw =
+      '{"format":"rep-track-backup","version":1,"__proto__":{"polluted":"yes"},' +
+      '"sessions":[{"id":"s1","dayId":"d1","dayLabel":"Push","dateKey":"2026-07-20",' +
+      '"startedAt":"2026-07-20T10:00:00.000Z","entries":[],"__proto__":{"polluted":"yes"}}]}';
+
+    const result = parseBackup(raw);
+
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(result.kind).toBe("ok");
+    expect(result.sessions[0]).not.toHaveProperty("polluted");
+    expect(Object.keys(result.sessions[0])).not.toContain("__proto__");
   });
 });
 
