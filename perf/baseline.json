@@ -1,6 +1,6 @@
 {
   "appVersion": "0.1.0",
-  "recordedAt": "2026-08-04T11:27:15.250Z",
+  "recordedAt": "2026-08-04T11:36:04.009Z",
   "bundle": {
     "routes": {
       "/history": {
@@ -14,6 +14,30 @@
       "/stats": {
         "gzipBytes": 441649,
         "files": 15
+      }
+    }
+  },
+  "latency": {
+    "baseUrl": "https://rep-track-ten.vercel.app",
+    "samples": 30,
+    "routes": {
+      "/": {
+        "ttfbP50": 66,
+        "ttfbP95": 79,
+        "totalP50": 68,
+        "totalP95": 82
+      },
+      "/history": {
+        "ttfbP50": 50,
+        "ttfbP95": 85,
+        "totalP50": 51,
+        "totalP95": 86
+      },
+      "/stats": {
+        "ttfbP50": 35,
+        "ttfbP95": 93,
+        "totalP50": 37,
+        "totalP95": 94
       }
     }
   }
