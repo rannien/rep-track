@@ -6,3 +6,11 @@
 allowBuilds:
   esbuild: true
   sharp: false
+
+# next pins vulnerable transitive versions (postcss 8.4.31, sharp <0.35);
+# force the patched releases everywhere so `pnpm audit --prod` stays clean.
+#   postcss >=8.5.25 — GHSA-fxqj-rqcc-2cmp line (source-map file reads) + XSS
+#   sharp   >=0.35.0 — inherited libvips CVEs (unused here, but still resolved)
+overrides:
+  postcss: ">=8.5.25"
+  sharp: ">=0.35.0"
