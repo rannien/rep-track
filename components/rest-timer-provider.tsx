@@ -10,16 +10,17 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import {
+  DEFAULT_REST_SECONDS,
+  MAX_REST_SECONDS,
+  STEP_SECONDS,
+  clampRestSeconds,
+  formatClock,
+  parseStoredRestSeconds,
+} from "@/lib/rest-timer";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import { Minus, Plus, Timer, Volume2, VolumeX, X } from "lucide-react";
 
-// Evidence-aligned default: rests over 60 s carry a small hypertrophy edge, so
-// two minutes is a sensible starting point for working sets. The user can
-// change it in settings; per-rest ±15 s covers one-off adjustments.
-const DEFAULT_REST_SECONDS = 120;
-const STEP_SECONDS = 15;
-const MIN_REST_SECONDS = 15;
-const MAX_REST_SECONDS = 600;
 const MUTED_KEY = "rep-track-rest-muted";
 const REST_SECONDS_KEY = "rep-track-rest-seconds";
 
@@ -48,12 +49,6 @@ export function useRestTimer(): RestTimerContextValue {
   return ctx;
 }
 
-function formatClock(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
-
 export function RestTimerProvider({ children }: { children: ReactNode }) {
   // endsAt is the source of truth (a wall-clock target, drift-free); remaining
   // is derived by the ticking effect. null = idle.
@@ -76,15 +71,8 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       setMutedState(window.localStorage.getItem(MUTED_KEY) === "1");
-      const storedSeconds = Number.parseInt(
-        window.localStorage.getItem(REST_SECONDS_KEY) ?? "",
-        10,
-      );
-      if (
-        Number.isFinite(storedSeconds) &&
-        storedSeconds >= MIN_REST_SECONDS &&
-        storedSeconds <= MAX_REST_SECONDS
-      ) {
+      const storedSeconds = parseStoredRestSeconds(window.localStorage.getItem(REST_SECONDS_KEY));
+      if (storedSeconds !== null) {
         setDefaultSecondsState(storedSeconds);
       }
     } catch {
@@ -162,7 +150,7 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setDefaultSeconds = useCallback((seconds: number) => {
-    const clamped = Math.min(MAX_REST_SECONDS, Math.max(MIN_REST_SECONDS, Math.round(seconds)));
+    const clamped = clampRestSeconds(seconds);
     setDefaultSecondsState(clamped);
     try {
       window.localStorage.setItem(REST_SECONDS_KEY, String(clamped));

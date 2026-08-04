@@ -1,0 +1,11 @@
+{
+  "latency": {
+    "routes": ["/", "/history", "/stats"],
+    "p50Ms": 400,
+    "p95Ms": 1000,
+    "maxRegressionPct": 25
+  },
+  "bundle": {
+    "maxGrowthPct": 10
+  }
+}

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type LoggedSet,
   type Session,
+  addSetToSessions,
   bestOneRepMaxForExercise,
   bestOneRepMaxSet,
   entryBestOneRepMax,
@@ -21,6 +22,7 @@ import {
   parseRepsInput,
   parseSessionsBlob,
   parseWeightInput,
+  removeSetFromSessions,
   sessionSeries,
   sessionStats,
   todayKey,
@@ -85,6 +87,28 @@ describe("parseSessionsBlob", () => {
     expect(result).toEqual({ kind: "partial", sessions: [good], dropped: 1 });
   });
 
+  it("neutralizes prototype-pollution keys in stored data", () => {
+    // parseSession rebuilds every session field by field, so hostile keys in
+    // a hand-edited payload must neither survive nor touch Object.prototype.
+    const raw =
+      '[{"id":"s1","dayId":"d1","dayLabel":"Push","dateKey":"2026-07-20",' +
+      '"startedAt":"2026-07-20T10:00:00.000Z","entries":[],' +
+      '"__proto__":{"polluted":"yes"},"constructor":{"prototype":{"polluted":"yes"}}}]';
+
+    const result = parseSessionsBlob(raw);
+
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(result.kind).toBe("ok");
+    expect(Object.keys(result.sessions[0]).toSorted()).toEqual([
+      "dateKey",
+      "dayId",
+      "dayLabel",
+      "entries",
+      "id",
+      "startedAt",
+    ]);
+  });
+
   it("rejects sessions with malformed fields", () => {
     const cases: unknown[] = [
       { ...makeSession(), dateKey: "22/07/2026" },
@@ -99,6 +123,116 @@ describe("parseSessionsBlob", () => {
 
     // NaN serializes to null, so the last case fails on the weight type check.
     expect(result).toEqual({ kind: "partial", sessions: [], dropped: cases.length });
+  });
+});
+
+describe("addSetToSessions", () => {
+  const target = {
+    id: "new-session",
+    dayId: "day-1",
+    dayLabel: "Push",
+    dateKey: "2026-07-22",
+    startedAt: "2026-07-22T10:00:00.000Z",
+  };
+
+  it("creates the day's session with the supplied identity on the first set", () => {
+    const set = makeSet();
+
+    const result = addSetToSessions([], target, "Bench Press", set);
+
+    expect(result).toEqual([{ ...target, entries: [{ exercise: "Bench Press", sets: [set] }] }]);
+  });
+
+  it("appends to the exercise's entry when today's session already exists", () => {
+    const existing = makeSession({ dateKey: target.dateKey, dayId: target.dayId });
+    const second = makeSet({ id: "set-2", weight: 85 });
+
+    const result = addSetToSessions([existing], target, "Bench Press", second);
+
+    // The existing session keeps its identity — target's id is not applied.
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe(existing.id);
+    expect(result[0].entries[0].sets.map((s) => s.id)).toEqual(["set-1", "set-2"]);
+  });
+
+  it("starts a new entry for an exercise not yet logged today", () => {
+    const existing = makeSession({ dateKey: target.dateKey, dayId: target.dayId });
+
+    const result = addSetToSessions([existing], target, "Squat", makeSet({ id: "set-2" }));
+
+    expect(result[0].entries.map((e) => e.exercise)).toEqual(["Bench Press", "Squat"]);
+  });
+
+  it("keys the session by (day, date): another day or date gets its own session", () => {
+    const otherDay = makeSession({ id: "other", dayId: "day-2", dateKey: target.dateKey });
+    const otherDate = makeSession({ id: "older", dayId: target.dayId, dateKey: "2026-07-20" });
+
+    const result = addSetToSessions([otherDay, otherDate], target, "Bench Press", makeSet());
+
+    expect(result).toHaveLength(3);
+    expect(result[2].id).toBe(target.id);
+  });
+
+  it("leaves untouched sessions with their original references", () => {
+    const existing = makeSession({ dateKey: target.dateKey, dayId: target.dayId });
+    const unrelated = makeSession({ id: "other", dayId: "day-2" });
+
+    const result = addSetToSessions([unrelated, existing], target, "Bench Press", makeSet());
+
+    expect(result[0]).toBe(unrelated);
+    expect(result[1]).not.toBe(existing);
+  });
+});
+
+describe("removeSetFromSessions", () => {
+  it("removes only the targeted set", () => {
+    const session = makeSession({
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet(), makeSet({ id: "set-2", weight: 85 })] },
+      ],
+    });
+
+    const result = removeSetFromSessions([session], session.id, "Bench Press", "set-1");
+
+    expect(result[0].entries[0].sets.map((s) => s.id)).toEqual(["set-2"]);
+  });
+
+  it("prunes an entry that loses its last set, keeping the session", () => {
+    const session = makeSession({
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet()] },
+        { exercise: "Squat", sets: [makeSet({ id: "set-2" })] },
+      ],
+    });
+
+    const result = removeSetFromSessions([session], session.id, "Bench Press", "set-1");
+
+    expect(result[0].entries.map((e) => e.exercise)).toEqual(["Squat"]);
+  });
+
+  it("prunes the session once its last entry empties out", () => {
+    const session = makeSession();
+
+    expect(removeSetFromSessions([session], session.id, "Bench Press", "set-1")).toEqual([]);
+  });
+
+  it("leaves other sessions untouched by reference", () => {
+    const unrelated = makeSession({ id: "other" });
+    const session = makeSession({
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet(), makeSet({ id: "set-2", weight: 85 })] },
+      ],
+    });
+
+    const result = removeSetFromSessions([unrelated, session], session.id, "Bench Press", "set-1");
+
+    expect(result[0]).toBe(unrelated);
+  });
+
+  it("changes nothing when the set id is unknown", () => {
+    const session = makeSession();
+
+    expect(removeSetFromSessions([session], session.id, "Bench Press", "nope")).toEqual([session]);
   });
 });
 
