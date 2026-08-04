@@ -109,20 +109,27 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
   const beep = useCallback(() => {
     const ctx = audioRef.current;
     if (!ctx) return;
-    // Two short sine blips — enough to notice, not startle.
+    // A rising three-note chime, ~1.3 s end to end, so the end of a rest is
+    // hard to miss across a noisy gym without being harsh.
     const play = () => {
       const now = ctx.currentTime;
-      for (const offset of [0, 0.32]) {
+      const notes = [
+        { freq: 660, at: 0 },
+        { freq: 880, at: 0.42 },
+        { freq: 1175, at: 0.84 },
+      ];
+      const ring = 0.42; // how long each note sustains
+      for (const { freq, at } of notes) {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = "sine";
-        osc.frequency.value = 880;
-        gain.gain.setValueAtTime(0.0001, now + offset);
-        gain.gain.exponentialRampToValueAtTime(0.3, now + offset + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.22);
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, now + at);
+        gain.gain.exponentialRampToValueAtTime(0.3, now + at + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + at + ring);
         osc.connect(gain).connect(ctx.destination);
-        osc.start(now + offset);
-        osc.stop(now + offset + 0.24);
+        osc.start(now + at);
+        osc.stop(now + at + ring + 0.02);
       }
     };
     // The context can suspend during the long rest (or between workouts), which
@@ -202,7 +209,7 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
         setDone(true);
         if (!mutedRef.current) {
           beep();
-          navigator.vibrate?.([200, 100, 200]);
+          navigator.vibrate?.([300, 150, 300, 150, 300]);
         }
       }
     };
