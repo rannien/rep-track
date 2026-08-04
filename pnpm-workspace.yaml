@@ -3,9 +3,12 @@
 # ERR_PNPM_IGNORED_BUILDS.
 #   esbuild — vitest's bundler; its install script places the platform binary
 #   sharp   — not needed: next.config.mjs sets images.unoptimized: true
+#   msw     — @vitest/mocker's optional dep; its postinstall only prints a
+#             support banner and we never run msw itself
 allowBuilds:
   esbuild: true
   sharp: false
+  msw: false
 
 # next pins vulnerable transitive versions (postcss 8.4.31, sharp <0.35);
 # force the patched releases everywhere so `pnpm audit --prod` stays clean.
