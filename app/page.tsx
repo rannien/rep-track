@@ -2,6 +2,7 @@ import Link from "next/link";
 import { workouts } from "@/lib/workouts";
 import { WorkoutCard } from "@/components/workout-card";
 import { ExercisePanelProvider } from "@/components/exercise-panel-provider";
+import { RestTimerSettings } from "@/components/rest-timer-settings";
 import { ChartColumn, Dumbbell, History } from "lucide-react";
 
 export default function Page() {
@@ -54,6 +55,10 @@ export default function Page() {
           ))}
         </div>
       </ExercisePanelProvider>
+
+      <div className="mt-4 sm:mt-6">
+        <RestTimerSettings />
+      </div>
 
       <footer className="mt-8 border-t border-border pt-5 text-xs text-muted-foreground sm:mt-12 sm:text-sm">
         Keep your form clean and rest enough between sets.

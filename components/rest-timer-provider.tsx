@@ -14,20 +14,30 @@ import { useWakeLock } from "@/lib/use-wake-lock";
 import { Minus, Plus, Timer, Volume2, VolumeX, X } from "lucide-react";
 
 // Evidence-aligned default: rests over 60 s carry a small hypertrophy edge, so
-// two minutes is a sensible starting point for working sets. Per-rest ±15 s
-// covers the rest.
+// two minutes is a sensible starting point for working sets. The user can
+// change it in settings; per-rest ±15 s covers one-off adjustments.
 const DEFAULT_REST_SECONDS = 120;
 const STEP_SECONDS = 15;
+const MIN_REST_SECONDS = 15;
 const MAX_REST_SECONDS = 600;
 const MUTED_KEY = "rep-track-rest-muted";
+const REST_SECONDS_KEY = "rep-track-rest-seconds";
 
 type RestTimerContextValue = {
   /** Seconds left, 0 when idle. */
   remaining: number;
   /** True while a rest is counting down. */
   running: boolean;
-  /** Start (or restart) a rest; a logged set calls this. */
+  /** Start (or restart) a rest; a logged set calls this. Defaults to the preference. */
   start: (seconds?: number) => void;
+  /** Preferred rest length a logged set starts, persisted across sessions. */
+  defaultSeconds: number;
+  setDefaultSeconds: (seconds: number) => void;
+  /** Whether the completion alert is silenced. */
+  muted: boolean;
+  setMuted: (muted: boolean) => void;
+  /** Play the completion sound now — lets settings verify audio works. */
+  testSound: () => void;
 };
 
 const RestTimerContext = createContext<RestTimerContextValue | null>(null);
@@ -50,19 +60,35 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [duration, setDuration] = useState(DEFAULT_REST_SECONDS);
   const [remaining, setRemaining] = useState(0);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMutedState] = useState(false);
+  const [defaultSeconds, setDefaultSecondsState] = useState(DEFAULT_REST_SECONDS);
   const [done, setDone] = useState(false); // drives the "rest complete" announcement
 
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
+  // Kept in a ref so start() can read the latest preference without becoming a
+  // new callback each time it changes.
+  const defaultSecondsRef = useRef(defaultSeconds);
+  defaultSecondsRef.current = defaultSeconds;
   const audioRef = useRef<AudioContext | null>(null);
 
-  // Persisted mute preference (localStorage-derived → read on mount).
+  // Persisted preferences (localStorage-derived → read on mount, not render).
   useEffect(() => {
     try {
-      setMuted(window.localStorage.getItem(MUTED_KEY) === "1");
+      setMutedState(window.localStorage.getItem(MUTED_KEY) === "1");
+      const storedSeconds = Number.parseInt(
+        window.localStorage.getItem(REST_SECONDS_KEY) ?? "",
+        10,
+      );
+      if (
+        Number.isFinite(storedSeconds) &&
+        storedSeconds >= MIN_REST_SECONDS &&
+        storedSeconds <= MAX_REST_SECONDS
+      ) {
+        setDefaultSecondsState(storedSeconds);
+      }
     } catch {
-      // Storage blocked — default to unmuted.
+      // Storage blocked — keep the built-in defaults.
     }
   }, []);
 
@@ -84,27 +110,41 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
     const ctx = audioRef.current;
     if (!ctx) return;
     // Two short sine blips — enough to notice, not startle.
-    const now = ctx.currentTime;
-    for (const offset of [0, 0.3]) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.0001, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.2, now + offset + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.18);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(now + offset);
-      osc.stop(now + offset + 0.2);
+    const play = () => {
+      const now = ctx.currentTime;
+      for (const offset of [0, 0.32]) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.0001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.3, now + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.22);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.24);
+      }
+    };
+    // The context can suspend during the long rest (or between workouts), which
+    // silences a scheduled tone — resume it first, then play.
+    if (ctx.state === "suspended") {
+      ctx
+        .resume()
+        .then(play)
+        .catch(() => {});
+    } else {
+      play();
     }
   }, []);
 
   const start = useCallback(
-    (seconds = DEFAULT_REST_SECONDS) => {
+    (seconds?: number) => {
+      const secs = seconds ?? defaultSecondsRef.current;
       ensureAudio();
       setDone(false);
-      setDuration(seconds);
-      setRemaining(seconds);
-      setEndsAt(Date.now() + seconds * 1000);
+      setDuration(secs);
+      setRemaining(secs);
+      setEndsAt(Date.now() + secs * 1000);
     },
     [ensureAudio],
   );
@@ -112,6 +152,16 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
   const stop = useCallback(() => {
     setEndsAt(null);
     setRemaining(0);
+  }, []);
+
+  const setDefaultSeconds = useCallback((seconds: number) => {
+    const clamped = Math.min(MAX_REST_SECONDS, Math.max(MIN_REST_SECONDS, Math.round(seconds)));
+    setDefaultSecondsState(clamped);
+    try {
+      window.localStorage.setItem(REST_SECONDS_KEY, String(clamped));
+    } catch {
+      // Non-fatal: the choice just won't survive a reload.
+    }
   }, []);
 
   const adjust = useCallback((delta: number) => {
@@ -124,17 +174,21 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
     setDuration((d) => Math.min(MAX_REST_SECONDS, Math.max(STEP_SECONDS, d + delta)));
   }, []);
 
-  const toggleMute = useCallback(() => {
-    setMuted((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem(MUTED_KEY, next ? "1" : "0");
-      } catch {
-        // Non-fatal.
-      }
-      return next;
-    });
+  const setMuted = useCallback((next: boolean) => {
+    setMutedState(next);
+    try {
+      window.localStorage.setItem(MUTED_KEY, next ? "1" : "0");
+    } catch {
+      // Non-fatal.
+    }
   }, []);
+
+  // Fire the completion sound on demand — used by the settings "Test sound"
+  // button, which doubles as the user gesture that unlocks audio playback.
+  const testSound = useCallback(() => {
+    ensureAudio();
+    beep();
+  }, [ensureAudio, beep]);
 
   // Tick while running; complete when the wall-clock target passes.
   useEffect(() => {
@@ -157,7 +211,19 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(id);
   }, [endsAt, beep]);
 
-  const value = useMemo(() => ({ remaining, running, start }), [remaining, running, start]);
+  const value = useMemo(
+    () => ({
+      remaining,
+      running,
+      start,
+      defaultSeconds,
+      setDefaultSeconds,
+      muted,
+      setMuted,
+      testSound,
+    }),
+    [remaining, running, start, defaultSeconds, setDefaultSeconds, muted, setMuted, testSound],
+  );
 
   const progress = duration > 0 ? Math.min(1, remaining / duration) : 0;
 
@@ -199,7 +265,7 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
                 </button>
                 <button
                   type="button"
-                  onClick={toggleMute}
+                  onClick={() => setMuted(!muted)}
                   aria-label={muted ? "Unmute rest alert" : "Mute rest alert"}
                   aria-pressed={muted}
                   className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-card text-card-foreground transition-colors hover:bg-secondary/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
