@@ -24,7 +24,9 @@ import { workouts } from "@/lib/workouts";
 
 // Chart slots follow the plan's day order so a day keeps its color no matter
 // which sessions are in view; dayIds outside the current plan share the last
-// slot rather than minting new hues.
+// slot rather than minting new hues. chart-3 is reserved for the
+// exercise-scoped charts (ExerciseTotalsChart, ExerciseTrendChart) — if the
+// plan grows past two days, move those off chart-3 first.
 const dayColors = new Map(workouts.map((day, i) => [day.id, `var(--chart-${i + 1})`]));
 
 function dayColor(dayId: string): string {

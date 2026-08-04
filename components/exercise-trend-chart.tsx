@@ -179,12 +179,14 @@ export function ExerciseTrendChart({ sessions }: { sessions: Session[] }) {
                 allowDecimals={false}
               />
               <Tooltip cursor={{ stroke: "var(--border)" }} content={ExerciseTooltip} />
+              {/* chart-3 = the exercise-scoped hue, shared with
+                  ExerciseTotalsChart — day charts own chart-1/2/5. */}
               <Line
                 dataKey={metric}
                 type="linear"
-                stroke="var(--chart-1)"
+                stroke="var(--chart-3)"
                 strokeWidth={2}
-                dot={{ r: 4, fill: "var(--chart-1)", stroke: "var(--card)", strokeWidth: 2 }}
+                dot={{ r: 4, fill: "var(--chart-3)", stroke: "var(--card)", strokeWidth: 2 }}
                 activeDot={{ r: 5 }}
                 isAnimationActive={false}
               />

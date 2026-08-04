@@ -39,7 +39,11 @@ function TotalsTooltip({ active, payload }: TooltipContentProps) {
 
 // Lifetime totals per exercise as horizontal bars, sorted by the active
 // metric (the sorting lives in exerciseTotals). Single series → single hue,
-// no legend.
+// no legend. The hue is chart-3: the session trend chart above encodes day
+// identity with chart-1/2 (+ chart-5 for legacy days), so exercise-scoped
+// charts wear a slot no day uses — validated CVD-distinct from both day
+// colors in light and dark mode. A third plan day would claim chart-3;
+// move the exercise charts to a later slot if the plan grows.
 export function ExerciseTotalsChart({
   data,
   metric,
@@ -72,7 +76,7 @@ export function ExerciseTotalsChart({
           <Tooltip cursor={{ fill: "var(--muted)", fillOpacity: 0.5 }} content={TotalsTooltip} />
           <Bar
             dataKey={metric}
-            fill="var(--chart-1)"
+            fill="var(--chart-3)"
             maxBarSize={20}
             radius={[0, 4, 4, 0]}
             isAnimationActive={false}
