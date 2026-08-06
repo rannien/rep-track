@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { RestTimerProvider } from "@/components/rest-timer-provider";
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
 import { SessionProvider } from "@/components/session-provider";
+import { ThemeProvider } from "@/components/theme-provider";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -34,9 +36,16 @@ export const metadata: Metadata = {
   },
 };
 
-// The indigo brand tile also tints the mobile status bar / installed title bar.
+// The brand tint for the mobile status bar / installed title bar, per OS
+// appearance. It tracks the OS rather than the in-app class — a user forcing
+// the theme opposite their OS gets a slightly mismatched tint, accepted for
+// staying out of Next's head management. The dark value ≈ the dark
+// --background (oklch(0.145 0 0)).
 export const viewport: Viewport = {
-  themeColor: "#4b50d5",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#4b50d5" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 export default function RootLayout({
@@ -45,11 +54,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} bg-background`}>
+    // suppressHydrationWarning (one level deep) because the init script adds
+    // the "dark" class before hydration, so <html>'s attributes legitimately
+    // differ from the server HTML.
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} bg-background`}
+      suppressHydrationWarning
+    >
       <body className="font-sans antialiased">
-        <SessionProvider>
-          <RestTimerProvider>{children}</RestTimerProvider>
-        </SessionProvider>
+        {/* First in <body>: parser-blocking, so the stored theme applies
+            before first paint — no light flash on a dark preference. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <ThemeProvider>
+          <SessionProvider>
+            <RestTimerProvider>{children}</RestTimerProvider>
+          </SessionProvider>
+        </ThemeProvider>
         <ServiceWorkerRegistrar />
         {/* Dev-safe unconditionally: @vercel/analytics runs in debug mode
             outside production and sends nothing. */}

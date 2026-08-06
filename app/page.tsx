@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { workouts } from "@/lib/workouts";
 import { WorkoutCard } from "@/components/workout-card";
 import { ExercisePanelProvider } from "@/components/exercise-panel-provider";
-import { RestTimerSettings } from "@/components/rest-timer-settings";
-import { ChartColumn, Dumbbell, History } from "lucide-react";
+import { PageNav } from "@/components/page-nav";
+import { Dumbbell } from "lucide-react";
 
 export default function Page() {
   const totalExercises = workouts.reduce((sum, day) => sum + day.exercises.length, 0);
@@ -20,22 +19,7 @@ export default function Page() {
               Rep Track
             </span>
           </div>
-          <nav className="flex items-center gap-2" aria-label="Pages">
-            <Link
-              href="/stats"
-              className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:text-sm"
-            >
-              <ChartColumn className="size-4" aria-hidden="true" />
-              Stats
-            </Link>
-            <Link
-              href="/history"
-              className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:text-sm"
-            >
-              <History className="size-4" aria-hidden="true" />
-              History
-            </Link>
-          </nav>
+          <PageNav current="plan" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground text-balance sm:text-4xl">
           Weekly Training Program
@@ -55,10 +39,6 @@ export default function Page() {
           ))}
         </div>
       </ExercisePanelProvider>
-
-      <div className="mt-4 sm:mt-6">
-        <RestTimerSettings />
-      </div>
 
       <footer className="mt-8 border-t border-border pt-5 text-xs text-muted-foreground sm:mt-12 sm:text-sm">
         Keep your form clean and rest enough between sets.
