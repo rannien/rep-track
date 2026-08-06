@@ -92,7 +92,10 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
+  /* The :root indigo re-stepped for dark surfaces: light enough that it
+     clears WCAG AA as text on --background/--card, dark text on it (white
+     would fail) keeps buttons/pills AA too. Ring follows primary like :root. */
+  --primary: oklch(0.72 0.16 275);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -103,7 +106,7 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.72 0.16 275);
   /* Same hues as :root, re-stepped for the dark surface. */
   --chart-1: #3987e5;
   --chart-2: #d95926;
