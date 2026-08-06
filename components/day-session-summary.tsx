@@ -1,10 +1,12 @@
 "use client";
 
 import { useSessions } from "@/components/session-provider";
+import { dayProgress } from "@/lib/adherence";
 import { sessionStats } from "@/lib/sessions";
-import { CalendarCheck, CalendarPlus } from "lucide-react";
+import type { WorkoutDay } from "@/lib/workouts";
+import { CalendarCheck, CalendarPlus, CircleCheck } from "lucide-react";
 
-export function DaySessionSummary({ dayId }: { dayId: string }) {
+export function DaySessionSummary({ day }: { day: WorkoutDay }) {
   const { hydrated, todaySession } = useSessions();
 
   // Avoid SSR/client mismatch: nothing localStorage-derived until hydrated.
@@ -12,7 +14,7 @@ export function DaySessionSummary({ dayId }: { dayId: string }) {
     return <div className="mx-3 mb-3 h-9 sm:mx-4" aria-hidden="true" />;
   }
 
-  const session = todaySession(dayId);
+  const session = todaySession(day.id);
 
   if (!session) {
     return (
@@ -30,13 +32,37 @@ export function DaySessionSummary({ dayId }: { dayId: string }) {
     { label: "Reps", value: reps.toLocaleString() },
     { label: "Volume", value: volume > 0 ? `${volume.toLocaleString()} kg` : "—" },
   ];
+  const progress = dayProgress(day, session);
 
   return (
     <div className="mx-3 mb-3 flex flex-col gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 sm:mx-4">
       <span className="flex items-center gap-1.5 text-xs font-semibold text-card-foreground">
         <CalendarCheck className="size-3.5 text-primary" aria-hidden="true" />
         Today&apos;s session
+        {progress.targetSets > 0 ? (
+          <span className="ml-auto flex items-center gap-1 text-xs font-semibold tabular-nums text-card-foreground">
+            {progress.done ? (
+              <>
+                <CircleCheck className="size-3.5 text-primary" aria-hidden="true" />
+                Workout complete · {progress.completedSets}/{progress.targetSets} sets
+              </>
+            ) : (
+              <>
+                {progress.completedSets}/{progress.targetSets} sets
+              </>
+            )}
+          </span>
+        ) : null}
       </span>
+      {progress.targetSets > 0 ? (
+        // Decorative: the counter above carries the information.
+        <div className="h-1 overflow-hidden rounded-full bg-secondary" aria-hidden="true">
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-300"
+            style={{ width: `${progress.fraction * 100}%` }}
+          />
+        </div>
+      ) : null}
       <dl className="grid grid-cols-3 gap-2">
         {stats.map((stat) => (
           <div key={stat.label} className="flex flex-col">

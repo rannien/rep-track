@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import type { Exercise } from "@/lib/workouts";
+import { exerciseProgress } from "@/lib/adherence";
 import { MovementBadge, MuscleBadge } from "@/components/badges";
 import { useExercisePanel } from "@/components/exercise-panel-provider";
 import { useRestTimer } from "@/components/rest-timer-provider";
@@ -17,7 +18,19 @@ import {
   parseRepsInput,
   parseWeightInput,
 } from "@/lib/sessions";
-import { Play, Plus, Dumbbell, Trash2, Check, History, Trophy, TrendingUp } from "lucide-react";
+import {
+  Play,
+  Plus,
+  CircleCheck,
+  Dumbbell,
+  Pencil,
+  Trash2,
+  Check,
+  History,
+  Trophy,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Scroll the row above the on-screen keyboard. window.innerHeight ignores the
@@ -43,18 +56,28 @@ export function ExerciseRow({
   dayId: string;
   dayLabel: string;
 }) {
-  const { hydrated, sessions, todaySession, addSet, removeSet } = useSessions();
+  const { hydrated, sessions, todaySession, addSet, removeSet, updateSet } = useSessions();
   const { start: startRest } = useRestTimer();
   const { openPanel, setOpenPanel } = useExercisePanel();
   const panelKey = `${dayId}:${exercise.name}`;
   const open = openPanel === panelKey;
   const [reps, setReps] = useState(String(exercise.reps));
   const [weight, setWeight] = useState("");
+  // Inline correction of an already-logged set. Keyed by set id, so if the set
+  // disappears (deleted in another tab) the row just renders in display mode.
+  const [editingSetId, setEditingSetId] = useState<string | null>(null);
+  const [editWeight, setEditWeight] = useState("");
+  const [editReps, setEditReps] = useState("");
+  const [editAnnouncement, setEditAnnouncement] = useState("");
   const weightInputRef = useRef<HTMLInputElement>(null);
+  const editWeightInputRef = useRef<HTMLInputElement>(null);
+  // Set id whose pencil button should regain focus once edit mode exits.
+  const pencilFocusRef = useRef<string | null>(null);
   const rowRef = useRef<HTMLLIElement>(null);
 
   const session = todaySession(dayId);
   const todaysSets = session?.entries.find((e) => e.exercise === exercise.name)?.sets ?? [];
+  const progress = exerciseProgress(session, exercise);
   // `sessions` is referentially stable across keystrokes (reps/weight are
   // local state), so the full-history scan only reruns when a set changes.
   const last = useMemo(
@@ -106,6 +129,45 @@ export function ExerciseRow({
   const weightValue = parseWeightInput(weight);
   const canSave = repsValue !== null && weightValue !== null;
 
+  const editRepsValue = parseRepsInput(editReps);
+  const editWeightValue = parseWeightInput(editWeight);
+  const canSaveEdit = editRepsValue !== null && editWeightValue !== null;
+
+  useEffect(() => {
+    if (editingSetId !== null) {
+      editWeightInputRef.current?.focus({ preventScroll: true });
+      if (rowRef.current) scrollAboveKeyboard(rowRef.current);
+    }
+  }, [editingSetId]);
+
+  function beginEdit(log: { id: string; reps: number; weight: number }) {
+    setEditingSetId(log.id);
+    setEditWeight(log.weight > 0 ? String(log.weight) : "");
+    setEditReps(String(log.reps));
+  }
+
+  function cancelEdit() {
+    pencilFocusRef.current = editingSetId;
+    setEditingSetId(null);
+  }
+
+  // Unlike handleAdd this never starts the rest timer — no set was performed,
+  // one was corrected.
+  function saveEdit(setNumber: number) {
+    if (!session || editingSetId === null || editRepsValue === null || editWeightValue === null) {
+      return;
+    }
+    updateSet(session.id, exercise.name, editingSetId, {
+      reps: editRepsValue,
+      weight: editWeightValue,
+    });
+    setEditAnnouncement(
+      `Set ${setNumber} updated: ${formatSet({ reps: editRepsValue, weight: editWeightValue })}.`,
+    );
+    pencilFocusRef.current = editingSetId;
+    setEditingSetId(null);
+  }
+
   function handleAdd() {
     if (repsValue === null || weightValue === null) return;
     addSet({ id: dayId, label: dayLabel }, exercise.name, {
@@ -143,10 +205,19 @@ export function ExerciseRow({
             <span className="text-xs font-medium text-muted-foreground">
               {exercise.sets} {"×"} {exercise.reps}
             </span>
-            {hydrated && todaysSets.length > 0 ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-                <Dumbbell className="size-3" aria-hidden="true" />
-                {todaysSets.length} {todaysSets.length === 1 ? "set today" : "sets today"}
+            {hydrated && progress.logged > 0 ? (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-primary",
+                  progress.met ? "bg-primary/15 font-semibold" : "bg-primary/10 font-medium",
+                )}
+              >
+                {progress.met ? (
+                  <CircleCheck className="size-3" aria-hidden="true" />
+                ) : (
+                  <Dumbbell className="size-3" aria-hidden="true" />
+                )}
+                {progress.logged}/{progress.target} sets
               </span>
             ) : null}
             {hydrated && prSet ? (
@@ -233,35 +304,130 @@ export function ExerciseRow({
               <ul className="flex flex-col gap-1.5">
                 {todaysSets.map((log, i) => {
                   const ref = last?.entry.sets[i];
+                  const editing = editingSetId === log.id;
                   return (
                     <li
                       key={log.id}
                       className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-1.5"
                     >
-                      <span className="flex items-center gap-2 text-sm tabular-nums text-card-foreground">
-                        <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
-                          {i + 1}
-                        </span>
-                        <span className="font-medium">{formatSet(log)}</span>
-                        {ref ? (
-                          <span className="text-xs font-normal text-muted-foreground">
-                            (last {formatSet(ref)})
+                      {editing ? (
+                        <span className="flex min-w-0 flex-1 items-center gap-2 text-sm tabular-nums text-card-foreground">
+                          <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
+                            {i + 1}
                           </span>
-                        ) : null}
+                          <label>
+                            <span className="sr-only">Weight in kilograms for set {i + 1}</span>
+                            <input
+                              ref={editWeightInputRef}
+                              type="text"
+                              inputMode="decimal"
+                              value={editWeight}
+                              onChange={(e) => {
+                                if (/^[0-9.,]*$/.test(e.target.value)) {
+                                  setEditWeight(e.target.value);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEdit(i + 1);
+                                if (e.key === "Escape") cancelEdit();
+                              }}
+                              placeholder="0"
+                              className="w-20 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            />
+                          </label>
+                          <span className="shrink-0 text-xs text-muted-foreground">kg ×</span>
+                          <label>
+                            <span className="sr-only">Reps for set {i + 1}</span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={editReps}
+                              onChange={(e) => {
+                                if (/^\d*$/.test(e.target.value)) {
+                                  setEditReps(e.target.value);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEdit(i + 1);
+                                if (e.key === "Escape") cancelEdit();
+                              }}
+                              className="w-16 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            />
+                          </label>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2 text-sm tabular-nums text-card-foreground">
+                          <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
+                            {i + 1}
+                          </span>
+                          <span className="font-medium">{formatSet(log)}</span>
+                          {ref ? (
+                            <span className="text-xs font-normal text-muted-foreground">
+                              (last {formatSet(ref)})
+                            </span>
+                          ) : null}
+                        </span>
+                      )}
+                      <span className="flex shrink-0 items-center gap-1">
+                        {editing ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => saveEdit(i + 1)}
+                              disabled={!canSaveEdit}
+                              aria-label={`Save changes to set ${i + 1}`}
+                              className="inline-flex size-7 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Check className="size-3.5" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEdit}
+                              aria-label={`Cancel editing set ${i + 1}`}
+                              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-card-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            >
+                              <X className="size-3.5" aria-hidden="true" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              ref={(el) => {
+                                if (el && pencilFocusRef.current === log.id) {
+                                  pencilFocusRef.current = null;
+                                  el.focus({ preventScroll: true });
+                                }
+                              }}
+                              onClick={() => beginEdit(log)}
+                              aria-label={`Edit set ${i + 1}`}
+                              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            >
+                              <Pencil className="size-3.5" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                session && removeSet(session.id, exercise.name, log.id)
+                              }
+                              aria-label={`Remove set ${i + 1}`}
+                              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            >
+                              <Trash2 className="size-3.5" aria-hidden="true" />
+                            </button>
+                          </>
+                        )}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => session && removeSet(session.id, exercise.name, log.id)}
-                        aria-label={`Remove set ${i + 1}`}
-                        className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      >
-                        <Trash2 className="size-3.5" aria-hidden="true" />
-                      </button>
                     </li>
                   );
                 })}
               </ul>
             ) : null}
+
+            {/* Edits are announced once; the visible set list already updated. */}
+            <output className="sr-only" aria-live="polite">
+              {editAnnouncement}
+            </output>
 
             {/* Add the next set; hint shows the matching set from last time */}
             <div className="flex flex-col gap-2">

@@ -45,7 +45,7 @@ export function WorkoutCard({ day }: { day: WorkoutDay }) {
         ))}
       </div>
 
-      <DaySessionSummary dayId={day.id} />
+      <DaySessionSummary day={day} />
 
       <ul className="divide-y divide-border border-t border-border">
         {day.exercises.map((exercise) => (

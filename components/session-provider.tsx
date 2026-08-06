@@ -11,17 +11,21 @@ import {
   type ReactNode,
 } from "react";
 import { TriangleAlert } from "lucide-react";
+import { UndoToast } from "@/components/undo-toast";
 import {
   SESSIONS_BACKUP_KEY,
   SESSIONS_KEY,
   type LoggedSet,
   type Session,
+  type SetRemoval,
   addSetToSessions,
   loadSessions,
   parseSessionsBlob,
-  removeSetFromSessions,
+  removeSetWithUndo,
+  restoreRemovedSet,
   saveSessions,
   todayKey,
+  updateSetInSessions,
 } from "@/lib/sessions";
 
 type DayRef = { id: string; label: string };
@@ -36,7 +40,15 @@ type SessionContextValue = {
   todaySession: (dayId: string) => Session | undefined;
   /** Append a set to today's session, creating the session/entry as needed. */
   addSet: (day: DayRef, exercise: string, set: { reps: number; weight: number }) => void;
+  /** Delete a set. Undoable for a few seconds via the provider's toast. */
   removeSet: (sessionId: string, exercise: string, setId: string) => void;
+  /** Correct a logged set's reps/weight in place. */
+  updateSet: (
+    sessionId: string,
+    exercise: string,
+    setId: string,
+    values: { reps: number; weight: number },
+  ) => void;
   /** Overwrite the whole history — the apply step of a backup import. */
   replaceAllSessions: (sessions: Session[]) => void;
   /** Set while persistence is degraded; drives the storage banner. */
@@ -55,6 +67,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [storageWarning, setStorageWarning] = useState<StorageWarning | null>(null);
+  // Deletions waiting for their undo window to expire. A stack: rapid deletes
+  // accumulate and one Undo restores them all (newest first). Kept across
+  // storage events — restoring is self-healing and duplicate-safe, and an
+  // explicit Undo tap outranks whatever another tab did meanwhile.
+  const [pendingRemovals, setPendingRemovals] = useState<SetRemoval[]>([]);
   // The last array loaded from or written to localStorage. Saving only when
   // state diverges from it keeps mount loads, storage events, and StrictMode
   // re-runs from being echoed back — in particular, a corrupt load can never
@@ -152,9 +169,37 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setSessions(next);
   }, []);
 
-  const removeSet = useCallback((sessionId: string, exercise: string, setId: string) => {
-    setSessions((prev) => removeSetFromSessions(prev, sessionId, exercise, setId));
-  }, []);
+  // Computed outside the state updater — capturing the removal is a side
+  // effect, and updaters re-run under StrictMode. Depending on `sessions` is
+  // free: the memoized context value changes with every sessions change anyway.
+  const removeSet = useCallback(
+    (sessionId: string, exercise: string, setId: string) => {
+      const { sessions: next, removed } = removeSetWithUndo(sessions, sessionId, exercise, setId);
+      if (!removed) return;
+      setSessions(next);
+      setPendingRemovals((prev) => [...prev, removed]);
+    },
+    [sessions],
+  );
+
+  const updateSet = useCallback(
+    (
+      sessionId: string,
+      exercise: string,
+      setId: string,
+      values: { reps: number; weight: number },
+    ) => {
+      setSessions((prev) => updateSetInSessions(prev, sessionId, exercise, setId, values));
+    },
+    [],
+  );
+
+  const undoRemovals = useCallback(() => {
+    setSessions((prev) => pendingRemovals.reduceRight(restoreRemovedSet, prev));
+    setPendingRemovals([]);
+  }, [pendingRemovals]);
+
+  const clearRemovals = useCallback(() => setPendingRemovals([]), []);
 
   const value = useMemo(
     () => ({
@@ -163,15 +208,28 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       todaySession,
       addSet,
       removeSet,
+      updateSet,
       replaceAllSessions,
       storageWarning,
     }),
-    [hydrated, sessions, todaySession, addSet, removeSet, replaceAllSessions, storageWarning],
+    [
+      hydrated,
+      sessions,
+      todaySession,
+      addSet,
+      removeSet,
+      updateSet,
+      replaceAllSessions,
+      storageWarning,
+    ],
   );
 
   return (
     <SessionContext.Provider value={value}>
       {children}
+      {pendingRemovals.length > 0 ? (
+        <UndoToast removals={pendingRemovals} onUndo={undoRemovals} onExpire={clearRemovals} />
+      ) : null}
       {storageWarning ? (
         <div
           role="alert"
