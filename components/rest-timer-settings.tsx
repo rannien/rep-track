@@ -34,11 +34,13 @@ export function RestTimerSettings() {
         </p>
       </div>
 
-      <fieldset className="flex flex-col gap-1.5">
+      <fieldset>
         <legend className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
           Default length
         </legend>
-        <div className="flex flex-wrap gap-1.5">
+        {/* Margin, not fieldset gap: a legend is not a flex item, so gap
+            between it and the options never applies. */}
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {PRESETS.map((seconds) => {
             const active = defaultSeconds === seconds;
             return (
