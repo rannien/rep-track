@@ -31,6 +31,9 @@ A big day: two feature phases plus follow-up fixes.
 - **Backdate a missed workout** — "Log a past day" on each day card switches logging to a past
   date; backfilled sessions never start the rest timer.
 - **Shared page navigation** with icon pills that fit four destinations on a 375 px screen.
+- **Edit past sessions** — every session on the History page has an edit mode (correct any set's
+  weight/reps in place, delete single sets) and a delete-session button; both are undoable via
+  the same toast as in-workout deletes, so one Undo brings a whole session back.
 
 ### Changed
 
