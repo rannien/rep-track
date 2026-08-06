@@ -22,13 +22,15 @@ pnpm perf:latency   # TTFB p50/p95 smoke against $PERF_BASE_URL (staging/preview
 
 **Tests are [vitest](https://vitest.dev) unit tests** covering the pure logic
 in `lib/` (`sessions.test.ts`, `backup.test.ts`, `workouts.test.ts`,
-`rest-timer.test.ts`, `adherence.test.ts`, `theme.test.ts`): payload validation
-(including hostile/prototype-pollution payloads), session mutations
-(`addSetToSessions`/`removeSetFromSessions`/`updateSetInSessions`/
+`rest-timer.test.ts`, `adherence.test.ts`, `theme.test.ts`, `units.test.ts`):
+payload validation (including hostile/prototype-pollution payloads), session
+mutations (`addSetToSessions`/`removeSetFromSessions`/`updateSetInSessions`/
 `removeSetWithUndo`+`restoreRemovedSet`), "last time" lookup, stats
-aggregation, plan-adherence progress, input parsing, date keying, backup
-round-trip/merge, theme resolution (including executing the inline
-`THEME_INIT_SCRIPT` against stubbed globals), and plan-data invariants. No config file — vitest defaults
+aggregation, personal records, plan-adherence progress and per-muscle totals,
+input parsing, kg/lb conversion round-trips, date keying (including
+`backdatedSessionStart`), backup round-trip/merge, theme resolution (including
+executing the inline `THEME_INIT_SCRIPT` against stubbed globals), and
+plan-data invariants. No config file — vitest defaults
 (node environment) suffice because the tested layer is IO-free. Tests import
 from `"vitest"` explicitly; there is no globals setup. Keep component logic
 extractable: pure state transitions live in `lib/`, providers stay thin.
@@ -52,10 +54,13 @@ next's transitive `postcss`/`sharp` pins on patched versions.
 **Rep Track** — a single-page Next.js 16 App Router app (React 19, RSC) that renders a fixed weekly workout plan and lets the user log sets per training day locally. Originally scaffolded by **v0.app** (`generator: 'v0.app'`).
 
 - **`lib/workouts.ts` is the source of truth for the displayed plan.** The `workouts` array (a `WorkoutDay[]`) is hard-coded here, along with the `Exercise`/`Movement` types and `movementLabels`. To change what exercises/days/sets/reps appear, edit this array — there is no backend or CMS.
-- **`app/page.tsx`** (server component) maps over `workouts` and renders a `WorkoutCard` per day. `app/layout.tsx` sets fonts (Geist), metadata/icons, injects the pre-paint `THEME_INIT_SCRIPT`, wraps the app in `<ThemeProvider>` → `<SessionProvider>` → `<RestTimerProvider>`, and mounts Vercel Analytics unconditionally (outside production it runs in debug mode and sends nothing). Pages: `/` (plan), `/history`, `/stats`, `/settings` (appearance + rest-timer preferences); the shared header nav is `components/page-nav.tsx` (server, `current` prop).
+- **`app/page.tsx`** (server component) maps over `workouts` and renders a `WorkoutCard` per day. `app/layout.tsx` sets fonts (Geist), metadata/icons, injects the pre-paint `THEME_INIT_SCRIPT`, wraps the app in `<ThemeProvider>` → `<UnitProvider>` → `<SessionProvider>` → `<RestTimerProvider>`, and mounts Vercel Analytics unconditionally (outside production it runs in debug mode and sends nothing). Pages: `/` (plan), `/history`, `/stats`, `/settings` (appearance + units + rest-timer preferences); the shared header nav is `components/page-nav.tsx` (server, `current` prop).
 - **`components/workout-card.tsx`** (server) derives per-day stats (planned total sets/reps, push/pull counts) from the day's exercises, renders the `DaySessionSummary`, and lists `ExerciseRow`s.
 - **`components/exercise-row.tsx`** (client) owns the per-exercise logging UI: an expandable panel to add sets (weight + reps), today's logged sets with inline editing (pencil → compact weight/reps inputs; saving never starts the rest timer), and a per-set "last time" reference for progressive overload.
-- **Plan adherence lives in `lib/adherence.ts`** — the join of the plan (`lib/workouts.ts`) and the logged sessions, kept out of `lib/sessions.ts` so the session model stays plan-agnostic. `exerciseProgress` drives the "2/4 sets" chip on each row; `dayProgress` (per-exercise clamped, so extras can't mask a skipped lift) drives the day card's progress bar and "Workout complete" state.
+- **Plan adherence lives in `lib/adherence.ts`** — the join of the plan (`lib/workouts.ts`) and the logged sessions, kept out of `lib/sessions.ts` so the session model stays plan-agnostic. `exerciseProgress` drives the "2/4 sets" chip on each row; `dayProgress` (per-exercise clamped, so extras can't mask a skipped lift) drives the day card's progress bar and "Workout complete" state. `muscleTotals` (same module — also a plan join; takes the plan as a parameter so tests stay synthetic) feeds the per-muscle-group chart on `/stats`, crediting an exercise's full work to every muscle it lists, off-plan names bucketed under "Other".
+- **Weights are stored in kg, always** (`LoggedSet.weight`, volumes, backups). The kg/lb preference (`lib/units.ts`, key `rep-track-unit`, `components/unit-provider.tsx` → `useUnit()`) converts only at the display/input edge: `parseWeightInput(value, unit)` returns kg, `formatSet`/`formatOneRepMax`/`formatVolume` take the unit, and charts convert point values before plotting (unit embedded in the point) so axes and tooltips agree. `weightFromKg`/`weightToKg` round so a typed lb value survives the round trip exactly.
+- **Backdating**: `components/logging-date-provider.tsx` (plan page only, pure view state) holds a per-day date override; `BackdatePicker` (single-date calendar popover in `DaySessionSummary`) sets it. `ExerciseRow` logs via `sessionOn(dayId, dateKey)` and `addSet(..., dateKey)`; a backfilled session gets `backdatedSessionStart` (local noon) as `startedAt`, and logging a backdated set never starts the rest timer.
+- **/stats additions**: per-muscle-group totals chart (`components/muscle-totals-chart.tsx`) and the all-time PR board (`components/pr-board.tsx`, fed by `personalRecords()` in `lib/sessions.ts` — deliberately ignores the date-range filter).
 
 ### Session tracking (the core feature)
 

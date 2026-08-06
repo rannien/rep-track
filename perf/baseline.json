@@ -1,22 +1,22 @@
 {
   "appVersion": "0.1.0",
-  "recordedAt": "2026-08-06T11:58:01.988Z",
+  "recordedAt": "2026-08-06T12:30:49.106Z",
   "bundle": {
     "routes": {
       "/history": {
-        "gzipBytes": 277136,
+        "gzipBytes": 277706,
         "files": 14
       },
       "/": {
-        "gzipBytes": 284362,
+        "gzipBytes": 285924,
         "files": 14
       },
       "/settings": {
-        "gzipBytes": 275686,
+        "gzipBytes": 276729,
         "files": 14
       },
       "/stats": {
-        "gzipBytes": 460464,
+        "gzipBytes": 462431,
         "files": 15
       }
     }
