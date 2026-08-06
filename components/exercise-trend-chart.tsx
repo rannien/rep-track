@@ -16,9 +16,11 @@ import {
   ChartTooltipFrame,
   ChartTooltipRow,
   axisTick,
+  formatChartOneRepMax,
   formatCount,
   formatVolume,
 } from "@/components/chart-chrome";
+import { useUnit } from "@/components/unit-provider";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -36,9 +38,9 @@ import {
   exerciseSeries,
   exerciseTotals,
   formatDate,
-  formatOneRepMax,
   formatSessionDate,
 } from "@/lib/sessions";
+import { type WeightUnit, volumeFromKg, weightFromKg } from "@/lib/units";
 import { useSetSearchParams } from "@/lib/use-set-search-params";
 import { cn } from "@/lib/utils";
 import { workouts } from "@/lib/workouts";
@@ -58,16 +60,23 @@ function isExerciseMetric(value: string | null): value is ExerciseMetric {
   return value === "oneRepMax" || value === "volume" || value === "reps";
 }
 
+// The plotted points carry their display unit so the tooltip needs no props
+// beyond what recharts injects.
+type DisplayPoint = ExercisePoint & { unit: WeightUnit };
+
 function ExerciseTooltip({ active, payload }: TooltipContentProps) {
-  const point = payload?.[0]?.payload as ExercisePoint | undefined;
+  const point = payload?.[0]?.payload as DisplayPoint | undefined;
   if (!active || !point) return null;
   return (
     <ChartTooltipFrame title={`${point.dayLabel} · ${formatSessionDate(point.startedAt)}`}>
       <ChartTooltipRow label="Sets" value={formatCount(point.sets)} />
       <ChartTooltipRow label="Reps" value={formatCount(point.reps)} />
-      <ChartTooltipRow label="Volume" value={formatVolume(point.volume)} />
+      <ChartTooltipRow label="Volume" value={formatVolume(point.volume, point.unit)} />
       {point.oneRepMax > 0 && (
-        <ChartTooltipRow label="Est. 1RM" value={formatOneRepMax(point.oneRepMax)} />
+        <ChartTooltipRow
+          label="Est. 1RM"
+          value={formatChartOneRepMax(point.oneRepMax, point.unit)}
+        />
       )}
     </ChartTooltipFrame>
   );
@@ -80,6 +89,7 @@ function ExerciseTooltip({ active, payload }: TooltipContentProps) {
 export function ExerciseTrendChart({ sessions }: { sessions: Session[] }) {
   const searchParams = useSearchParams();
   const setSearchParams = useSetSearchParams();
+  const { unit } = useUnit();
   const metricName = useId();
   const exerciseSelectId = useId();
 
@@ -103,7 +113,20 @@ export function ExerciseTrendChart({ sessions }: { sessions: Session[] }) {
   const exercise =
     exerciseParam !== null && selectable.has(exerciseParam) ? exerciseParam : topExercise;
 
-  const points = useMemo(() => exerciseSeries(sessions, exercise), [sessions, exercise]);
+  // Volume/1RM converted to the display unit before plotting so the axis and
+  // tooltip agree; reps and sets are unitless. Mutating is safe — the points
+  // are freshly built by exerciseSeries for this call.
+  const points = useMemo<DisplayPoint[]>(
+    () =>
+      exerciseSeries(sessions, exercise).map((point) =>
+        Object.assign(point, {
+          volume: volumeFromKg(point.volume, unit),
+          oneRepMax: weightFromKg(point.oneRepMax, unit),
+          unit,
+        }),
+      ),
+    [sessions, exercise, unit],
+  );
 
   return (
     <div className="flex flex-col gap-3">

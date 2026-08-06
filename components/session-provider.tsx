@@ -19,6 +19,7 @@ import {
   type Session,
   type SetRemoval,
   addSetToSessions,
+  backdatedSessionStart,
   loadSessions,
   parseSessionsBlob,
   removeSetWithUndo,
@@ -38,8 +39,18 @@ type SessionContextValue = {
   sessions: Session[];
   /** Today's session for a given workout day, if one has been started. */
   todaySession: (dayId: string) => Session | undefined;
-  /** Append a set to today's session, creating the session/entry as needed. */
-  addSet: (day: DayRef, exercise: string, set: { reps: number; weight: number }) => void;
+  /** The session for a given workout day on a given calendar date, if any. */
+  sessionOn: (dayId: string, dateKey: string) => Session | undefined;
+  /**
+   * Append a set to the day's session, creating the session/entry as needed.
+   * dateKey targets a past calendar date (backfilling); default is today.
+   */
+  addSet: (
+    day: DayRef,
+    exercise: string,
+    set: { reps: number; weight: number },
+    dateKey?: string,
+  ) => void;
   /** Delete a set. Undoable for a few seconds via the provider's toast. */
   removeSet: (sessionId: string, exercise: string, setId: string) => void;
   /** Correct a logged set's reps/weight in place. */
@@ -133,29 +144,31 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setStorageWarning("save-failed");
   }, [sessions, hydrated]);
 
-  const todaySession = useCallback(
-    (dayId: string) => {
-      const key = todayKey();
-      return sessions.find((s) => s.dayId === dayId && s.dateKey === key);
-    },
+  const sessionOn = useCallback(
+    (dayId: string, dateKey: string) =>
+      sessions.find((s) => s.dayId === dayId && s.dateKey === dateKey),
     [sessions],
   );
 
+  const todaySession = useCallback((dayId: string) => sessionOn(dayId, todayKey()), [sessionOn]);
+
   const addSet = useCallback(
-    (day: DayRef, exercise: string, set: { reps: number; weight: number }) => {
+    (day: DayRef, exercise: string, set: { reps: number; weight: number }, dateKey?: string) => {
       const newSet: LoggedSet = {
         id: crypto.randomUUID(),
         reps: set.reps,
         weight: set.weight,
       };
-      // The session identity is only used if today's session doesn't exist
-      // yet; addSetToSessions ignores it otherwise.
+      const key = dateKey ?? todayKey();
+      // The session identity is only used if the day's session doesn't exist
+      // yet; addSetToSessions ignores it otherwise. A backfilled session gets
+      // a synthetic noon start so it orders sanely among real timestamps.
       const target = {
         id: crypto.randomUUID(),
         dayId: day.id,
         dayLabel: day.label,
-        dateKey: todayKey(),
-        startedAt: new Date().toISOString(),
+        dateKey: key,
+        startedAt: key === todayKey() ? new Date().toISOString() : backdatedSessionStart(key),
       };
       setSessions((prev) => addSetToSessions(prev, target, exercise, newSet));
     },
@@ -206,6 +219,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       hydrated,
       sessions,
       todaySession,
+      sessionOn,
       addSet,
       removeSet,
       updateSet,
@@ -216,6 +230,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       hydrated,
       sessions,
       todaySession,
+      sessionOn,
       addSet,
       removeSet,
       updateSet,

@@ -3,6 +3,7 @@ import {
   type LoggedSet,
   type Session,
   addSetToSessions,
+  backdatedSessionStart,
   bestOneRepMaxForExercise,
   bestOneRepMaxSet,
   entryBestOneRepMax,
@@ -22,6 +23,7 @@ import {
   parseRepsInput,
   parseSessionsBlob,
   parseWeightInput,
+  personalRecords,
   removeSetFromSessions,
   removeSetWithUndo,
   restoreRemovedSet,
@@ -469,6 +471,69 @@ describe("restoreRemovedSet", () => {
   });
 });
 
+describe("personalRecords", () => {
+  it("returns no records for an empty history", () => {
+    expect(personalRecords([])).toEqual([]);
+  });
+
+  it("keeps the best set per exercise across sessions, with its session date", () => {
+    const older = makeSession({
+      id: "a",
+      startedAt: "2026-07-10T10:00:00.000Z",
+      entries: [{ exercise: "Bench Press", sets: [makeSet({ id: "old", weight: 80 })] }],
+    });
+    const newer = makeSession({
+      id: "b",
+      startedAt: "2026-07-18T10:00:00.000Z",
+      entries: [{ exercise: "Bench Press", sets: [makeSet({ id: "new", weight: 100 })] }],
+    });
+
+    const records = personalRecords([newer, older]);
+
+    expect(records).toEqual([
+      {
+        exercise: "Bench Press",
+        set: { id: "new", reps: 8, weight: 100 },
+        oneRepMax: estimatedOneRepMax({ weight: 100, reps: 8 }),
+        startedAt: "2026-07-18T10:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("keeps the first achievement on a tie", () => {
+    const first = makeSession({ id: "a", startedAt: "2026-07-10T10:00:00.000Z" });
+    const repeat = makeSession({ id: "b", startedAt: "2026-07-18T10:00:00.000Z" });
+
+    const records = personalRecords([repeat, first]);
+
+    expect(records[0].startedAt).toBe("2026-07-10T10:00:00.000Z");
+  });
+
+  it("never records a bodyweight-only exercise", () => {
+    const session = makeSession({
+      entries: [{ exercise: "Pull-Up", sets: [makeSet({ weight: 0 })] }],
+    });
+
+    expect(personalRecords([session])).toEqual([]);
+  });
+
+  it("sorts by estimated 1RM descending, ties by name", () => {
+    const session = makeSession({
+      entries: [
+        { exercise: "Curl", sets: [makeSet({ id: "c", weight: 30 })] },
+        { exercise: "Squat", sets: [makeSet({ id: "s", weight: 120 })] },
+        { exercise: "Bench Press", sets: [makeSet({ id: "b", weight: 120 })] },
+      ],
+    });
+
+    expect(personalRecords([session]).map((r) => r.exercise)).toEqual([
+      "Bench Press",
+      "Squat",
+      "Curl",
+    ]);
+  });
+});
+
 describe("lastEntryForExercise", () => {
   it("returns the most recent session that logged the exercise", () => {
     const older = makeSession({ id: "a", startedAt: "2026-07-10T10:00:00.000Z" });
@@ -594,9 +659,10 @@ describe("estimated 1RM & personal records", () => {
     expect(bestOneRepMaxForExercise([makeSession()], "Deadlift")).toBe(0);
   });
 
-  it("formats a 1RM as kg, dropping a trailing .0", () => {
-    expect(formatOneRepMax(120)).toBe("120 kg");
-    expect(formatOneRepMax(117.5)).toBe("117.5 kg");
+  it("formats a 1RM in the display unit, dropping a trailing .0", () => {
+    expect(formatOneRepMax(120, "kg")).toBe("120 kg");
+    expect(formatOneRepMax(117.5, "kg")).toBe("117.5 kg");
+    expect(formatOneRepMax(100, "lb")).toBe("220.5 lb");
   });
 });
 
@@ -808,18 +874,25 @@ describe("logging-input parsing", () => {
   });
 
   it("treats empty weight as bodyweight and accepts dot or comma decimals", () => {
-    expect(parseWeightInput("")).toBe(0);
-    expect(parseWeightInput("80")).toBe(80);
-    expect(parseWeightInput("82.5")).toBe(82.5);
-    expect(parseWeightInput("82,5")).toBe(82.5);
-    expect(parseWeightInput("1000")).toBe(1000);
+    expect(parseWeightInput("", "kg")).toBe(0);
+    expect(parseWeightInput("80", "kg")).toBe(80);
+    expect(parseWeightInput("82.5", "kg")).toBe(82.5);
+    expect(parseWeightInput("82,5", "kg")).toBe(82.5);
+    expect(parseWeightInput("1000", "kg")).toBe(1000);
+  });
+
+  it("converts an lb entry to kg for storage", () => {
+    expect(parseWeightInput("100", "lb")).toBe(45.359);
+    // 2204 lb ≈ 999.7 kg still fits the kg bound; 2210 lb exceeds it.
+    expect(parseWeightInput("2204", "lb")).not.toBeNull();
+    expect(parseWeightInput("2210", "lb")).toBeNull();
   });
 
   it("rejects malformed or out-of-bounds weight", () => {
-    expect(parseWeightInput("1.2.3")).toBeNull();
-    expect(parseWeightInput("-5")).toBeNull();
-    expect(parseWeightInput("80kg")).toBeNull();
-    expect(parseWeightInput("1001")).toBeNull();
+    expect(parseWeightInput("1.2.3", "kg")).toBeNull();
+    expect(parseWeightInput("-5", "kg")).toBeNull();
+    expect(parseWeightInput("80kg", "kg")).toBeNull();
+    expect(parseWeightInput("1001", "kg")).toBeNull();
   });
 });
 
@@ -848,8 +921,20 @@ describe("date formatting", () => {
     expect(formatDate("2026-07-20T10:00:00.000Z")).toMatch(/^[A-Z][a-z]{2} \d{1,2}$/);
   });
 
-  it("formats a set as weight × reps", () => {
-    expect(formatSet({ weight: 80, reps: 8 })).toBe("80 kg × 8");
-    expect(formatSet({ weight: 0, reps: 12 })).toBe("0 kg × 12");
+  it("anchors a backdated session at local noon of its calendar day", () => {
+    const startedAt = backdatedSessionStart("2026-07-20");
+
+    const date = new Date(startedAt);
+    expect(date.getFullYear()).toBe(2026);
+    expect(date.getMonth()).toBe(6);
+    expect(date.getDate()).toBe(20);
+    expect(date.getHours()).toBe(12);
+    expect(dateToDateKey(date)).toBe("2026-07-20");
+  });
+
+  it("formats a set as weight × reps in the display unit", () => {
+    expect(formatSet({ weight: 80, reps: 8 }, "kg")).toBe("80 kg × 8");
+    expect(formatSet({ weight: 0, reps: 12 }, "kg")).toBe("0 kg × 12");
+    expect(formatSet({ weight: 45.359, reps: 8 }, "lb")).toBe("100 lb × 8");
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayProgress, exerciseProgress } from "./adherence";
+import { OTHER_MUSCLE, dayProgress, exerciseProgress, muscleTotals } from "./adherence";
 import type { LoggedSet, Session } from "./sessions";
 import type { Exercise, WorkoutDay } from "./workouts";
 
@@ -170,5 +170,60 @@ describe("dayProgress", () => {
       fraction: 0,
       done: false,
     });
+  });
+});
+
+describe("muscleTotals", () => {
+  const days = [
+    makeDay([
+      makeExercise({ name: "Bench Press", muscles: ["Chest", "Triceps"] }),
+      makeExercise({ name: "Row", muscles: ["Back"] }),
+    ]),
+  ];
+
+  it("returns nothing for an empty history", () => {
+    expect(muscleTotals([], days, "volume")).toEqual([]);
+  });
+
+  it("credits an exercise's full work to every muscle it lists", () => {
+    // 2 sets × 8 reps × 80 kg
+    const session = makeSession([{ exercise: "Bench Press", sets: makeSets(2) }]);
+
+    const totals = muscleTotals([session], days, "volume");
+
+    expect(totals).toEqual([
+      { muscle: "Chest", sets: 2, reps: 16, volume: 1280 },
+      { muscle: "Triceps", sets: 2, reps: 16, volume: 1280 },
+    ]);
+  });
+
+  it("buckets off-plan exercises under Other, always sorted last", () => {
+    const session = makeSession([
+      { exercise: "Imported Curls", sets: makeSets(5) },
+      { exercise: "Row", sets: makeSets(1) },
+    ]);
+
+    const totals = muscleTotals([session], days, "volume");
+
+    expect(totals.map((t) => t.muscle)).toEqual(["Back", OTHER_MUSCLE]);
+    expect(totals[1]).toEqual({ muscle: OTHER_MUSCLE, sets: 5, reps: 40, volume: 3200 });
+  });
+
+  it("sorts by the requested metric descending, ties by name", () => {
+    const session = makeSession([
+      { exercise: "Bench Press", sets: makeSets(1) },
+      { exercise: "Row", sets: makeSets(1) },
+    ]);
+
+    const totals = muscleTotals([session], days, "reps");
+
+    // All three muscles tie on reps → alphabetical.
+    expect(totals.map((t) => t.muscle)).toEqual(["Back", "Chest", "Triceps"]);
+  });
+
+  it("skips set-less entries", () => {
+    const session = makeSession([{ exercise: "Row", sets: [] }]);
+
+    expect(muscleTotals([session], days, "volume")).toEqual([]);
   });
 });

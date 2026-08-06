@@ -2,6 +2,8 @@
 // exercise. Persisted to localStorage; see components/session-provider.tsx for
 // the React layer that reads/writes this.
 
+import { type WeightUnit, weightFromKg, weightToKg } from "./units";
+
 export type LoggedSet = {
   id: string;
   reps: number;
@@ -335,14 +337,16 @@ export function parseRepsInput(value: string): number | null {
   return reps > 0 && reps <= MAX_REPS ? reps : null;
 }
 
-// Weight as typed into the logging form; empty means bodyweight (0 kg) and
-// comma decimals are accepted. Null when not a loggable value.
-export function parseWeightInput(value: string): number | null {
+// Weight as typed into the logging form, in the user's display unit; empty
+// means bodyweight (0) and comma decimals are accepted. Returns the KG value
+// to store — conversion lives here so no caller can forget it. Null when not
+// a loggable value.
+export function parseWeightInput(value: string, unit: WeightUnit): number | null {
   const trimmed = value.trim();
   if (trimmed === "") return 0;
   if (!/^\d+([.,]\d+)?$/.test(trimmed)) return null;
-  const weight = Number.parseFloat(trimmed.replace(",", "."));
-  return weight <= MAX_WEIGHT_KG ? weight : null;
+  const kg = weightToKg(Number.parseFloat(trimmed.replace(",", ".")), unit);
+  return kg <= MAX_WEIGHT_KG ? kg : null;
 }
 
 // Local calendar date as YYYY-MM-DD (en-CA renders ISO-style dates).
@@ -435,6 +439,16 @@ export function dateKeyToDate(key: string): Date {
 // Inverse of dateKeyToDate, following todayKey's local-date convention.
 export function dateToDateKey(date: Date): string {
   return date.toLocaleDateString("en-CA");
+}
+
+// startedAt for a session logged retroactively: local noon of that calendar
+// day. Noon keeps the timestamp inside the day it names for every offset a
+// traveling user might view it from, and orders backfilled sessions sanely
+// among real ones.
+export function backdatedSessionStart(dateKey: string): string {
+  const date = dateKeyToDate(dateKey);
+  date.setHours(12, 0, 0, 0);
+  return date.toISOString();
 }
 
 // Compact label for a dateKey ("Jul 19"); goes through the local Date so the
@@ -596,6 +610,42 @@ export function bestOneRepMaxForExercise(
   return best;
 }
 
+export type PersonalRecord = {
+  exercise: string;
+  set: LoggedSet; // the actual lifted set behind the record
+  oneRepMax: number; // its estimated 1RM
+  startedAt: string; // when the record session happened
+};
+
+// All-time best estimated 1RM per exercise with the set that produced it —
+// the PR board. Sessions are scanned in chronological order and only a
+// strictly better estimate displaces the record, so ties keep the first
+// achievement. Bodyweight-only exercises (estimate 0) never qualify. Sorted
+// by 1RM descending, ties by name.
+export function personalRecords(sessions: Session[]): PersonalRecord[] {
+  const byExercise = new Map<string, PersonalRecord>();
+  const chronological = sessions.toSorted((a, b) => a.startedAt.localeCompare(b.startedAt));
+  for (const session of chronological) {
+    for (const entry of session.entries) {
+      for (const set of entry.sets) {
+        const estimate = estimatedOneRepMax(set);
+        if (estimate <= 0) continue;
+        const current = byExercise.get(entry.exercise);
+        if (current && estimate <= current.oneRepMax) continue;
+        byExercise.set(entry.exercise, {
+          exercise: entry.exercise,
+          set,
+          oneRepMax: estimate,
+          startedAt: session.startedAt,
+        });
+      }
+    }
+  }
+  return [...byExercise.values()].toSorted(
+    (a, b) => b.oneRepMax - a.oneRepMax || a.exercise.localeCompare(b.exercise),
+  );
+}
+
 // Most recent session — excluding the one in progress — that logged this
 // exercise, so the UI can surface "what you lifted last time" set by set.
 export function lastEntryForExercise(
@@ -631,12 +681,13 @@ export function formatSessionDate(iso: string): string {
   });
 }
 
-export function formatSet(set: { reps: number; weight: number }): string {
-  return `${set.weight} kg × ${set.reps}`;
+// A logged set in the user's display unit; the stored weight is always kg.
+export function formatSet(set: { reps: number; weight: number }, unit: WeightUnit): string {
+  return `${weightFromKg(set.weight, unit).toLocaleString()} ${unit} × ${set.reps}`;
 }
 
-// Estimated 1RM as a compact kg label; drops a trailing ".0" so whole numbers
-// read cleanly ("120 kg", "117.5 kg").
-export function formatOneRepMax(value: number): string {
-  return `${Number(value.toFixed(1)).toLocaleString()} kg`;
+// Estimated 1RM (kg) as a compact display-unit label; drops a trailing ".0"
+// so whole numbers read cleanly ("120 kg", "117.5 kg").
+export function formatOneRepMax(value: number, unit: WeightUnit): string {
+  return `${Number(weightFromKg(value, unit).toFixed(1)).toLocaleString()} ${unit}`;
 }

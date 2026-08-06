@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { WeightUnit } from "@/lib/units";
 
 // Shared chrome for the stats charts: recharts axis styling and the
 // presentational tooltip shell each chart's content component fills in.
@@ -11,9 +12,16 @@ export function formatCount(value: number): string {
   return value.toLocaleString();
 }
 
-// Same zero-as-dash rendering the history and day summary use for volume.
-export function formatVolume(volume: number): string {
-  return volume > 0 ? `${volume.toLocaleString()} kg` : "—";
+// Label a volume that is ALREADY in the display unit — charts convert their
+// point values before plotting (see displayPoints in each chart) so axes and
+// tooltips agree. Zero dashes out, same as the history/day-summary rendering.
+export function formatVolume(volume: number, unit: WeightUnit): string {
+  return volume > 0 ? `${volume.toLocaleString()} ${unit}` : "—";
+}
+
+// Same, at the 1-decimal precision estimated 1RM uses.
+export function formatChartOneRepMax(value: number, unit: WeightUnit): string {
+  return `${Number(value.toFixed(1)).toLocaleString()} ${unit}`;
 }
 
 export function ChartTooltipFrame({ title, children }: { title: ReactNode; children: ReactNode }) {

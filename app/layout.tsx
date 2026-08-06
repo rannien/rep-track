@@ -5,6 +5,7 @@ import { RestTimerProvider } from "@/components/rest-timer-provider";
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
 import { SessionProvider } from "@/components/session-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { UnitProvider } from "@/components/unit-provider";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -67,9 +68,13 @@ export default function RootLayout({
             before first paint — no light flash on a dark preference. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <ThemeProvider>
-          <SessionProvider>
-            <RestTimerProvider>{children}</RestTimerProvider>
-          </SessionProvider>
+          {/* UnitProvider wraps SessionProvider: the undo toast it renders
+              formats weights, so it needs the unit context. */}
+          <UnitProvider>
+            <SessionProvider>
+              <RestTimerProvider>{children}</RestTimerProvider>
+            </SessionProvider>
+          </UnitProvider>
         </ThemeProvider>
         <ServiceWorkerRegistrar />
         {/* Dev-safe unconditionally: @vercel/analytics runs in debug mode

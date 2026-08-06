@@ -17,24 +17,19 @@ import {
   formatCount,
   formatVolume,
 } from "@/components/chart-chrome";
-import type { ExerciseTotals, StatsMetric } from "@/lib/sessions";
+import type { MuscleTotals } from "@/lib/adherence";
+import type { StatsMetric } from "@/lib/sessions";
 import { type WeightUnit, volumeFromKg } from "@/lib/units";
-
-// Tick labels get tight at 375px; the tooltip carries the full name.
-function truncateName(name: string): string {
-  return name.length > 18 ? `${name.slice(0, 17).trimEnd()}…` : name;
-}
 
 // The plotted rows carry their display unit so the tooltip needs no props
 // beyond what recharts injects.
-type DisplayTotals = ExerciseTotals & { unit: WeightUnit };
+type DisplayTotals = MuscleTotals & { unit: WeightUnit };
 
-function TotalsTooltip({ active, payload }: TooltipContentProps) {
+function MuscleTooltip({ active, payload }: TooltipContentProps) {
   const totals = payload?.[0]?.payload as DisplayTotals | undefined;
   if (!active || !totals) return null;
   return (
-    <ChartTooltipFrame title={totals.exercise}>
-      <ChartTooltipRow label="Sessions" value={formatCount(totals.sessions)} />
+    <ChartTooltipFrame title={totals.muscle}>
       <ChartTooltipRow label="Sets" value={formatCount(totals.sets)} />
       <ChartTooltipRow label="Reps" value={formatCount(totals.reps)} />
       <ChartTooltipRow label="Volume" value={formatVolume(totals.volume, totals.unit)} />
@@ -42,19 +37,17 @@ function TotalsTooltip({ active, payload }: TooltipContentProps) {
   );
 }
 
-// Lifetime totals per exercise as horizontal bars, sorted by the active
-// metric (the sorting lives in exerciseTotals). Single series → single hue,
-// no legend. The hue is chart-3: the session trend chart above encodes day
-// identity with chart-1/2 (+ chart-5 for legacy days), so exercise-scoped
-// charts wear a slot no day uses — validated CVD-distinct from both day
-// colors in light and dark mode. A third plan day would claim chart-3;
-// move the exercise charts to a later slot if the plan grows.
-export function ExerciseTotalsChart({
+// Totals per muscle group as horizontal bars, sorted by the active metric
+// (sorting lives in muscleTotals). Single series → single hue; wears chart-3
+// like the other aggregate-totals chart — in single-series charts the hue
+// carries no meaning, so the exercise/muscle sections stay visually one
+// family and the day-identity slots (chart-1/2/5) stay untouched.
+export function MuscleTotalsChart({
   data,
   metric,
   unit,
 }: {
-  data: ExerciseTotals[];
+  data: MuscleTotals[];
   metric: StatsMetric;
   unit: WeightUnit;
 }) {
@@ -82,14 +75,13 @@ export function ExerciseTotalsChart({
           />
           <YAxis
             type="category"
-            dataKey="exercise"
+            dataKey="muscle"
             width="auto"
             tickLine={false}
             axisLine={false}
             tick={axisTick}
-            tickFormatter={truncateName}
           />
-          <Tooltip cursor={{ fill: "var(--muted)", fillOpacity: 0.5 }} content={TotalsTooltip} />
+          <Tooltip cursor={{ fill: "var(--muted)", fillOpacity: 0.5 }} content={MuscleTooltip} />
           <Bar
             dataKey={metric}
             fill="var(--chart-3)"

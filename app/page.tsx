@@ -1,6 +1,7 @@
 import { workouts } from "@/lib/workouts";
 import { WorkoutCard } from "@/components/workout-card";
 import { ExercisePanelProvider } from "@/components/exercise-panel-provider";
+import { LoggingDateProvider } from "@/components/logging-date-provider";
 import { PageNav } from "@/components/page-nav";
 import { Dumbbell } from "lucide-react";
 
@@ -32,13 +33,15 @@ export default function Page() {
         </p>
       </header>
 
-      <ExercisePanelProvider>
-        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-          {workouts.map((day) => (
-            <WorkoutCard key={day.id} day={day} />
-          ))}
-        </div>
-      </ExercisePanelProvider>
+      <LoggingDateProvider>
+        <ExercisePanelProvider>
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+            {workouts.map((day) => (
+              <WorkoutCard key={day.id} day={day} />
+            ))}
+          </div>
+        </ExercisePanelProvider>
+      </LoggingDateProvider>
 
       <footer className="mt-8 border-t border-border pt-5 text-xs text-muted-foreground sm:mt-12 sm:text-sm">
         Keep your form clean and rest enough between sets.

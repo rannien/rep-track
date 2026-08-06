@@ -5,8 +5,11 @@ import type { Exercise } from "@/lib/workouts";
 import { exerciseProgress } from "@/lib/adherence";
 import { MovementBadge, MuscleBadge } from "@/components/badges";
 import { useExercisePanel } from "@/components/exercise-panel-provider";
+import { useLoggingDate } from "@/components/logging-date-provider";
 import { useRestTimer } from "@/components/rest-timer-provider";
 import { useSessions } from "@/components/session-provider";
+import { useUnit } from "@/components/unit-provider";
+import { weightFromKg } from "@/lib/units";
 import {
   bestOneRepMaxForExercise,
   bestOneRepMaxSet,
@@ -56,8 +59,10 @@ export function ExerciseRow({
   dayId: string;
   dayLabel: string;
 }) {
-  const { hydrated, sessions, todaySession, addSet, removeSet, updateSet } = useSessions();
+  const { hydrated, sessions, sessionOn, addSet, removeSet, updateSet } = useSessions();
   const { start: startRest } = useRestTimer();
+  const { unit } = useUnit();
+  const { dateFor, isBackdated } = useLoggingDate();
   const { openPanel, setOpenPanel } = useExercisePanel();
   const panelKey = `${dayId}:${exercise.name}`;
   const open = openPanel === panelKey;
@@ -75,7 +80,10 @@ export function ExerciseRow({
   const pencilFocusRef = useRef<string | null>(null);
   const rowRef = useRef<HTMLLIElement>(null);
 
-  const session = todaySession(dayId);
+  // The date this row logs into — today, unless the day card was backdated.
+  const activeDate = dateFor(dayId);
+  const backdated = isBackdated(dayId);
+  const session = sessionOn(dayId, activeDate);
   const todaysSets = session?.entries.find((e) => e.exercise === exercise.name)?.sets ?? [];
   const progress = exerciseProgress(session, exercise);
   // `sessions` is referentially stable across keystrokes (reps/weight are
@@ -107,12 +115,12 @@ export function ExerciseRow({
   useEffect(() => {
     if (target) {
       setReps(String(target.reps));
-      setWeight(target.weight > 0 ? String(target.weight) : "");
+      setWeight(target.weight > 0 ? String(weightFromKg(target.weight, unit)) : "");
     } else {
       setReps(String(exercise.reps));
       setWeight("");
     }
-  }, [target, exercise.reps]);
+  }, [target, exercise.reps, unit]);
 
   useEffect(() => {
     if (open) {
@@ -126,11 +134,11 @@ export function ExerciseRow({
   // The Save button is disabled while these are null, so an invalid input
   // can never end in a silent no-op.
   const repsValue = parseRepsInput(reps);
-  const weightValue = parseWeightInput(weight);
+  const weightValue = parseWeightInput(weight, unit);
   const canSave = repsValue !== null && weightValue !== null;
 
   const editRepsValue = parseRepsInput(editReps);
-  const editWeightValue = parseWeightInput(editWeight);
+  const editWeightValue = parseWeightInput(editWeight, unit);
   const canSaveEdit = editRepsValue !== null && editWeightValue !== null;
 
   useEffect(() => {
@@ -142,7 +150,7 @@ export function ExerciseRow({
 
   function beginEdit(log: { id: string; reps: number; weight: number }) {
     setEditingSetId(log.id);
-    setEditWeight(log.weight > 0 ? String(log.weight) : "");
+    setEditWeight(log.weight > 0 ? String(weightFromKg(log.weight, unit)) : "");
     setEditReps(String(log.reps));
   }
 
@@ -162,7 +170,7 @@ export function ExerciseRow({
       weight: editWeightValue,
     });
     setEditAnnouncement(
-      `Set ${setNumber} updated: ${formatSet({ reps: editRepsValue, weight: editWeightValue })}.`,
+      `Set ${setNumber} updated: ${formatSet({ reps: editRepsValue, weight: editWeightValue }, unit)}.`,
     );
     pencilFocusRef.current = editingSetId;
     setEditingSetId(null);
@@ -170,13 +178,16 @@ export function ExerciseRow({
 
   function handleAdd() {
     if (repsValue === null || weightValue === null) return;
-    addSet({ id: dayId, label: dayLabel }, exercise.name, {
-      reps: repsValue,
-      weight: weightValue,
-    });
-    // Kick off the rest countdown from the same tap that logs the set — this is
-    // the user gesture the completion beep needs to satisfy autoplay policy.
-    startRest();
+    addSet(
+      { id: dayId, label: dayLabel },
+      exercise.name,
+      { reps: repsValue, weight: weightValue },
+      activeDate,
+    );
+    // Kick off the rest countdown from the same tap that logs the set — this
+    // is the user gesture the completion beep needs to satisfy autoplay
+    // policy. A backfilled set is data entry, not training: no countdown.
+    if (!backdated) startRest();
     setReps(String(repsValue));
     setWeight("");
     weightInputRef.current?.focus();
@@ -222,11 +233,11 @@ export function ExerciseRow({
             ) : null}
             {hydrated && prSet ? (
               <span
-                title={`Estimated 1RM ${formatOneRepMax(todayBest)}`}
+                title={`Estimated 1RM ${formatOneRepMax(todayBest, unit)}`}
                 className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400"
               >
                 <Trophy className="size-3" aria-hidden="true" />
-                New PR · {formatSet(prSet)}
+                New PR · {formatSet(prSet, unit)}
               </span>
             ) : null}
           </div>
@@ -234,7 +245,7 @@ export function ExerciseRow({
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <History className="size-3" aria-hidden="true" />
               Last {formatDate(last.session.startedAt)}:{" "}
-              {last.entry.sets.map((s) => formatSet(s)).join(", ")}
+              {last.entry.sets.map((s) => formatSet(s, unit)).join(", ")}
             </span>
           ) : null}
         </div>
@@ -294,7 +305,7 @@ export function ExerciseRow({
                   Best est. 1RM
                 </span>
                 <span className="font-semibold tabular-nums text-card-foreground">
-                  {formatOneRepMax(currentBest)}
+                  {formatOneRepMax(currentBest, unit)}
                 </span>
               </div>
             ) : null}
@@ -316,7 +327,9 @@ export function ExerciseRow({
                             {i + 1}
                           </span>
                           <label>
-                            <span className="sr-only">Weight in kilograms for set {i + 1}</span>
+                            <span className="sr-only">
+                              Weight in {unit === "kg" ? "kilograms" : "pounds"} for set {i + 1}
+                            </span>
                             <input
                               ref={editWeightInputRef}
                               type="text"
@@ -335,7 +348,7 @@ export function ExerciseRow({
                               className="w-20 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             />
                           </label>
-                          <span className="shrink-0 text-xs text-muted-foreground">kg ×</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">{unit} ×</span>
                           <label>
                             <span className="sr-only">Reps for set {i + 1}</span>
                             <input
@@ -360,10 +373,10 @@ export function ExerciseRow({
                           <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
                             {i + 1}
                           </span>
-                          <span className="font-medium">{formatSet(log)}</span>
+                          <span className="font-medium">{formatSet(log, unit)}</span>
                           {ref ? (
                             <span className="text-xs font-normal text-muted-foreground">
-                              (last {formatSet(ref)})
+                              (last {formatSet(ref, unit)})
                             </span>
                           ) : null}
                         </span>
@@ -437,14 +450,15 @@ export function ExerciseRow({
                 </span>
                 {target ? (
                   <span className="text-xs text-muted-foreground">
-                    Last time: <span className="font-medium text-primary">{formatSet(target)}</span>
+                    Last time:{" "}
+                    <span className="font-medium text-primary">{formatSet(target, unit)}</span>
                   </span>
                 ) : null}
               </div>
               <div className="flex items-end gap-2">
                 <label className="flex flex-1 flex-col gap-1">
                   <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Weight (kg)
+                    Weight ({unit})
                   </span>
                   <input
                     ref={weightInputRef}
@@ -457,7 +471,9 @@ export function ExerciseRow({
                         setWeight(val);
                       }
                     }}
-                    placeholder={target && target.weight > 0 ? String(target.weight) : "0"}
+                    placeholder={
+                      target && target.weight > 0 ? String(weightFromKg(target.weight, unit)) : "0"
+                    }
                     className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </label>
@@ -506,7 +522,7 @@ export function ExerciseRow({
                       <span className="inline-flex size-4 items-center justify-center rounded bg-primary/10 text-[10px] font-semibold text-primary">
                         {i + 1}
                       </span>
-                      {formatSet(s)}
+                      {formatSet(s, unit)}
                     </span>
                   ))}
                 </div>

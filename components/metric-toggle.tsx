@@ -2,24 +2,26 @@
 
 import { useId } from "react";
 import type { StatsMetric } from "@/lib/sessions";
+import type { WeightUnit } from "@/lib/units";
 import { cn } from "@/lib/utils";
-
-const options: { value: StatsMetric; label: string }[] = [
-  { value: "volume", label: "Volume (kg)" },
-  { value: "reps", label: "Reps" },
-];
 
 // Segmented control that scopes every stats chart to one metric — volume and
 // reps are different units and never share an axis. Visually-hidden native
 // radios carry the exclusive-choice semantics and arrow-key behavior.
 export function MetricToggle({
   value,
+  unit,
   onChange,
 }: {
   value: StatsMetric;
+  unit: WeightUnit;
   onChange: (metric: StatsMetric) => void;
 }) {
   const name = useId();
+  const options: { value: StatsMetric; label: string }[] = [
+    { value: "volume", label: `Volume (${unit})` },
+    { value: "reps", label: "Reps" },
+  ];
 
   return (
     <fieldset className="inline-flex w-fit items-center rounded-full border border-border bg-secondary p-0.5">

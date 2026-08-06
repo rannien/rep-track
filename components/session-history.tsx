@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSessions } from "@/components/session-provider";
+import { useUnit } from "@/components/unit-provider";
 import {
   type Session,
   entryVolume,
@@ -10,6 +11,7 @@ import {
   formatSet,
   sessionStats,
 } from "@/lib/sessions";
+import { formatVolume } from "@/lib/units";
 import { cn } from "@/lib/utils";
 import { CalendarPlus, ChevronDown } from "lucide-react";
 
@@ -49,6 +51,7 @@ export function SessionHistory() {
 }
 
 function SessionList({ sessions }: { sessions: Session[] }) {
+  const { unit } = useUnit();
   // Single-open accordion, starting with the most recent session. A button +
   // animated grid (same smooth grid-template-rows disclosure as the exercise
   // logging panels) rather than native <details>, which snaps open instantly.
@@ -61,7 +64,7 @@ function SessionList({ sessions }: { sessions: Session[] }) {
         const stats = [
           { label: "Sets", value: sets.toLocaleString() },
           { label: "Reps", value: reps.toLocaleString() },
-          { label: "Volume", value: volume > 0 ? `${volume.toLocaleString()} kg` : "—" },
+          { label: "Volume", value: formatVolume(volume, unit) },
         ];
         const open = openId === session.id;
         const panelId = `history-panel-${session.id}`;
@@ -128,7 +131,7 @@ function SessionList({ sessions }: { sessions: Session[] }) {
                             <span className="text-xs text-muted-foreground">
                               Volume{" "}
                               <span className="font-semibold tabular-nums text-card-foreground">
-                                {exerciseVolume > 0 ? `${exerciseVolume.toLocaleString()} kg` : "—"}
+                                {formatVolume(exerciseVolume, unit)}
                               </span>
                             </span>
                           </div>
@@ -141,7 +144,7 @@ function SessionList({ sessions }: { sessions: Session[] }) {
                                 <span className="inline-flex size-4 items-center justify-center rounded bg-primary/10 text-[10px] font-semibold text-primary">
                                   {i + 1}
                                 </span>
-                                {formatSet(set)}
+                                {formatSet(set, unit)}
                               </span>
                             ))}
                           </div>

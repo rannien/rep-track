@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Undo2, X } from "lucide-react";
+import { useUnit } from "@/components/unit-provider";
 import { type SetRemoval, formatSet } from "@/lib/sessions";
 
 const UNDO_WINDOW_MS = 6000;
@@ -20,6 +21,7 @@ export function UndoToast({
   onUndo: () => void;
   onExpire: () => void;
 }) {
+  const { unit } = useUnit();
   const pausedRef = useRef(false);
   const timerRef = useRef<number | null>(null);
   const onExpireRef = useRef(onExpire);
@@ -50,7 +52,7 @@ export function UndoToast({
   const latest = removals[removals.length - 1];
   const label =
     removals.length === 1
-      ? `Removed set: ${latest.exercise} — ${formatSet(latest.set)}`
+      ? `Removed set: ${latest.exercise} — ${formatSet(latest.set, unit)}`
       : `Removed ${removals.length} sets`;
 
   return (

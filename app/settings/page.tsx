@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageNav } from "@/components/page-nav";
 import { RestTimerSettings } from "@/components/rest-timer-settings";
 import { ThemeSettings } from "@/components/theme-settings";
+import { UnitSettings } from "@/components/unit-settings";
 
 export default function SettingsPage() {
   return (
@@ -18,8 +19,8 @@ export default function SettingsPage() {
 
       <div className="flex flex-col gap-4 sm:gap-6">
         <ThemeSettings />
+        <UnitSettings />
         <RestTimerSettings />
-        {/* The units (kg/lb) preference card slots in here when implemented. */}
         <p className="text-xs text-muted-foreground sm:text-sm">
           Backup &amp; restore lives on the{" "}
           <Link href="/history" className="font-medium text-primary hover:underline">
