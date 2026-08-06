@@ -476,7 +476,7 @@ describe("personalRecords", () => {
     expect(personalRecords([])).toEqual([]);
   });
 
-  it("keeps the best set per exercise across sessions, with its session date", () => {
+  it("keeps the heaviest set per exercise across sessions, with its session date", () => {
     const older = makeSession({
       id: "a",
       startedAt: "2026-07-10T10:00:00.000Z",
@@ -494,19 +494,42 @@ describe("personalRecords", () => {
       {
         exercise: "Bench Press",
         set: { id: "new", reps: 8, weight: 100 },
-        oneRepMax: estimatedOneRepMax({ weight: 100, reps: 8 }),
         startedAt: "2026-07-18T10:00:00.000Z",
       },
     ]);
   });
 
-  it("keeps the first achievement on a tie", () => {
+  it("picks the actual weight, not the highest estimated 1RM", () => {
+    // 90×12 estimates a higher 1RM (126) than 100×1 (100) — the record is
+    // still the 100, because that is what was really lifted.
+    const session = makeSession({
+      entries: [
+        {
+          exercise: "Bench Press",
+          sets: [
+            makeSet({ id: "reps", weight: 90, reps: 12 }),
+            makeSet({ id: "heavy", weight: 100, reps: 1 }),
+          ],
+        },
+      ],
+    });
+
+    expect(personalRecords([session])[0].set.id).toBe("heavy");
+  });
+
+  it("breaks an equal weight by more reps, otherwise keeps the first achievement", () => {
     const first = makeSession({ id: "a", startedAt: "2026-07-10T10:00:00.000Z" });
     const repeat = makeSession({ id: "b", startedAt: "2026-07-18T10:00:00.000Z" });
 
-    const records = personalRecords([repeat, first]);
+    expect(personalRecords([repeat, first])[0].startedAt).toBe("2026-07-10T10:00:00.000Z");
 
-    expect(records[0].startedAt).toBe("2026-07-10T10:00:00.000Z");
+    const moreReps = makeSession({
+      id: "c",
+      startedAt: "2026-07-20T10:00:00.000Z",
+      entries: [{ exercise: "Bench Press", sets: [makeSet({ id: "better", reps: 10 })] }],
+    });
+
+    expect(personalRecords([repeat, first, moreReps])[0].set.id).toBe("better");
   });
 
   it("never records a bodyweight-only exercise", () => {
@@ -517,7 +540,7 @@ describe("personalRecords", () => {
     expect(personalRecords([session])).toEqual([]);
   });
 
-  it("sorts by estimated 1RM descending, ties by name", () => {
+  it("sorts by weight descending, ties by name", () => {
     const session = makeSession({
       entries: [
         { exercise: "Curl", sets: [makeSet({ id: "c", weight: 30 })] },

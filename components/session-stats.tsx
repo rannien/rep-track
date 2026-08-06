@@ -8,7 +8,6 @@ import { ExerciseTotalsChart } from "@/components/exercise-totals-chart";
 import { ExerciseTrendChart } from "@/components/exercise-trend-chart";
 import { MetricToggle } from "@/components/metric-toggle";
 import { MuscleTotalsChart } from "@/components/muscle-totals-chart";
-import { PrBoard } from "@/components/pr-board";
 import { SessionTrendChart } from "@/components/session-trend-chart";
 import { useSessions } from "@/components/session-provider";
 import { useUnit } from "@/components/unit-provider";
@@ -18,7 +17,6 @@ import {
   exerciseTotals,
   filterSessionsByDateRange,
   parseDateKeyParam,
-  personalRecords,
   sessionSeries,
   totalStats,
 } from "@/lib/sessions";
@@ -69,8 +67,6 @@ export function SessionStats() {
   const trend = useMemo(() => sessionSeries(filtered), [filtered]);
   const perExercise = useMemo(() => exerciseTotals(filtered, metric), [filtered, metric]);
   const perMuscle = useMemo(() => muscleTotals(filtered, workouts, metric), [filtered, metric]);
-  // All-time on purpose: records ignore the date-range filter.
-  const records = useMemo(() => personalRecords(sessions), [sessions]);
   const hasBodyweightSets = useMemo(
     () => filtered.some((s) => s.entries.some((e) => e.sets.some((set) => set.weight === 0))),
     [filtered],
@@ -178,16 +174,6 @@ export function SessionStats() {
         <h2 className="text-sm font-semibold text-card-foreground">Exercise over time</h2>
         {/* Owns its own metric (adds Est. 1RM), so it doesn't take the page toggle. */}
         <ExerciseTrendChart sessions={filtered} />
-      </section>
-
-      <section className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
-        <div className="flex flex-col gap-0.5">
-          <h2 className="text-sm font-semibold text-card-foreground">Personal records</h2>
-          <p className="text-xs text-muted-foreground">
-            All-time bests by estimated 1RM — not affected by the date filter.
-          </p>
-        </div>
-        <PrBoard records={records} />
       </section>
     </div>
   );

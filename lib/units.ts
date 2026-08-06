@@ -30,6 +30,11 @@ export function weightToKg(value: number, unit: WeightUnit): number {
   return unit === "kg" ? value : Number((value * KG_PER_LB).toFixed(3));
 }
 
+// Text label for a kg weight in the display unit ("82.5 kg", "220.46 lb").
+export function formatWeight(kg: number, unit: WeightUnit): string {
+  return `${weightFromKg(kg, unit).toLocaleString()} ${unit}`;
+}
+
 // kg volume (Σ weight × reps) → display volume, 1 decimal. Charts convert
 // their point values with this before plotting so axes and tooltips agree.
 export function volumeFromKg(kg: number, unit: WeightUnit): number {

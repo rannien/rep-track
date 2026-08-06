@@ -2,7 +2,7 @@
 // exercise. Persisted to localStorage; see components/session-provider.tsx for
 // the React layer that reads/writes this.
 
-import { type WeightUnit, weightFromKg, weightToKg } from "./units";
+import { type WeightUnit, formatWeight, weightFromKg, weightToKg } from "./units";
 
 export type LoggedSet = {
   id: string;
@@ -612,37 +612,40 @@ export function bestOneRepMaxForExercise(
 
 export type PersonalRecord = {
   exercise: string;
-  set: LoggedSet; // the actual lifted set behind the record
-  oneRepMax: number; // its estimated 1RM
+  set: LoggedSet; // the heaviest set actually lifted
   startedAt: string; // when the record session happened
 };
 
-// All-time best estimated 1RM per exercise with the set that produced it —
-// the PR board. Sessions are scanned in chronological order and only a
-// strictly better estimate displaces the record, so ties keep the first
-// achievement. Bodyweight-only exercises (estimate 0) never qualify. Sorted
-// by 1RM descending, ties by name.
+// All-time heaviest logged set per exercise — the actual lifted weight, not
+// an estimate. Sessions are scanned in chronological order; only a strictly
+// heavier set displaces the record (an equal weight only with more reps), so
+// ties keep the first achievement. Bodyweight-only exercises (weight 0)
+// never qualify. Sorted by weight descending, ties by name.
 export function personalRecords(sessions: Session[]): PersonalRecord[] {
   const byExercise = new Map<string, PersonalRecord>();
   const chronological = sessions.toSorted((a, b) => a.startedAt.localeCompare(b.startedAt));
   for (const session of chronological) {
     for (const entry of session.entries) {
       for (const set of entry.sets) {
-        const estimate = estimatedOneRepMax(set);
-        if (estimate <= 0) continue;
+        if (set.weight <= 0) continue;
         const current = byExercise.get(entry.exercise);
-        if (current && estimate <= current.oneRepMax) continue;
+        if (
+          current &&
+          (set.weight < current.set.weight ||
+            (set.weight === current.set.weight && set.reps <= current.set.reps))
+        ) {
+          continue;
+        }
         byExercise.set(entry.exercise, {
           exercise: entry.exercise,
           set,
-          oneRepMax: estimate,
           startedAt: session.startedAt,
         });
       }
     }
   }
   return [...byExercise.values()].toSorted(
-    (a, b) => b.oneRepMax - a.oneRepMax || a.exercise.localeCompare(b.exercise),
+    (a, b) => b.set.weight - a.set.weight || a.exercise.localeCompare(b.exercise),
   );
 }
 
@@ -683,7 +686,7 @@ export function formatSessionDate(iso: string): string {
 
 // A logged set in the user's display unit; the stored weight is always kg.
 export function formatSet(set: { reps: number; weight: number }, unit: WeightUnit): string {
-  return `${weightFromKg(set.weight, unit).toLocaleString()} ${unit} × ${set.reps}`;
+  return `${formatWeight(set.weight, unit)} × ${set.reps}`;
 }
 
 // Estimated 1RM (kg) as a compact display-unit label; drops a trailing ".0"
