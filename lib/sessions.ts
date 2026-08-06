@@ -214,6 +214,115 @@ export function removeSetFromSessions(
     .filter((s) => s.entries.length > 0);
 }
 
+// Overwrite one logged set's reps/weight in place, preserving its id and
+// position. Only the changed path gets new references; nothing matching — or
+// values that already hold — returns `sessions` itself, so a no-op edit never
+// triggers a save.
+export function updateSetInSessions(
+  sessions: Session[],
+  sessionId: string,
+  exercise: string,
+  setId: string,
+  values: { reps: number; weight: number },
+): Session[] {
+  const sessionIdx = sessions.findIndex((s) => s.id === sessionId);
+  if (sessionIdx === -1) return sessions;
+  const session = sessions[sessionIdx];
+  const entryIdx = session.entries.findIndex((e) => e.exercise === exercise);
+  if (entryIdx === -1) return sessions;
+  const entry = session.entries[entryIdx];
+  const setIdx = entry.sets.findIndex((set) => set.id === setId);
+  if (setIdx === -1) return sessions;
+  const set = entry.sets[setIdx];
+  if (set.reps === values.reps && set.weight === values.weight) return sessions;
+  const sets = entry.sets.slice();
+  sets[setIdx] = { ...set, reps: values.reps, weight: values.weight };
+  const entries = session.entries.slice();
+  entries[entryIdx] = { ...entry, sets };
+  const next = sessions.slice();
+  next[sessionIdx] = { ...session, entries };
+  return next;
+}
+
+// Everything needed to put a deleted set back exactly where it was, including
+// recreating the entry — and the session — that the removal may have pruned.
+export type SetRemoval = {
+  session: Omit<Session, "entries">;
+  exercise: string;
+  set: LoggedSet;
+  sessionIndex: number;
+  entryIndex: number;
+  setIndex: number;
+};
+
+// removeSetFromSessions plus a capture of what was removed and where, so the
+// deletion can be undone. `removed` is null — and `sessions` returned as the
+// same reference — when nothing matched.
+export function removeSetWithUndo(
+  sessions: Session[],
+  sessionId: string,
+  exercise: string,
+  setId: string,
+): { sessions: Session[]; removed: SetRemoval | null } {
+  const sessionIndex = sessions.findIndex((s) => s.id === sessionId);
+  if (sessionIndex === -1) return { sessions, removed: null };
+  const session = sessions[sessionIndex];
+  const entryIndex = session.entries.findIndex((e) => e.exercise === exercise);
+  if (entryIndex === -1) return { sessions, removed: null };
+  const setIndex = session.entries[entryIndex].sets.findIndex((set) => set.id === setId);
+  if (setIndex === -1) return { sessions, removed: null };
+  const removed: SetRemoval = {
+    session: {
+      id: session.id,
+      dayId: session.dayId,
+      dayLabel: session.dayLabel,
+      dateKey: session.dateKey,
+      startedAt: session.startedAt,
+    },
+    exercise,
+    set: session.entries[entryIndex].sets[setIndex],
+    sessionIndex,
+    entryIndex,
+    setIndex,
+  };
+  return { sessions: removeSetFromSessions(sessions, sessionId, exercise, setId), removed };
+}
+
+// Reinsert a captured removal. The session is looked up by (dayId, dateKey) —
+// the same key addSetToSessions uses — so undoing after the pruned session was
+// recreated under a new id never yields two sessions for one (day, date). A
+// pruned entry or session is rebuilt with its original identity at its
+// original (clamped) index; a set with the same id already present makes this
+// a no-op returning `sessions` itself, so a stale undo stays safe.
+export function restoreRemovedSet(sessions: Session[], removal: SetRemoval): Session[] {
+  const next = sessions.slice();
+  let sessionIdx = next.findIndex(
+    (s) => s.dayId === removal.session.dayId && s.dateKey === removal.session.dateKey,
+  );
+  let session: Session;
+  if (sessionIdx === -1) {
+    session = { ...removal.session, entries: [] };
+    sessionIdx = Math.min(removal.sessionIndex, next.length);
+    next.splice(sessionIdx, 0, session);
+  } else {
+    session = { ...next[sessionIdx], entries: next[sessionIdx].entries.slice() };
+    next[sessionIdx] = session;
+  }
+  let entryIdx = session.entries.findIndex((e) => e.exercise === removal.exercise);
+  let entry: ExerciseEntry;
+  if (entryIdx === -1) {
+    entry = { exercise: removal.exercise, sets: [] };
+    entryIdx = Math.min(removal.entryIndex, session.entries.length);
+    session.entries.splice(entryIdx, 0, entry);
+  } else {
+    if (session.entries[entryIdx].sets.some((set) => set.id === removal.set.id)) return sessions;
+    entry = { ...session.entries[entryIdx], sets: session.entries[entryIdx].sets.slice() };
+    session.entries[entryIdx] = entry;
+  }
+  entry.sets.splice(Math.min(removal.setIndex, entry.sets.length), 0, removal.set);
+  return next;
+}
+
 // Loose sanity bounds for the logging form — cap garbage, not training.
 export const MAX_REPS = 500;
 export const MAX_WEIGHT_KG = 1000;

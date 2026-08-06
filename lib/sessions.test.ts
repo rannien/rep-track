@@ -23,10 +23,13 @@ import {
   parseSessionsBlob,
   parseWeightInput,
   removeSetFromSessions,
+  removeSetWithUndo,
+  restoreRemovedSet,
   sessionSeries,
   sessionStats,
   todayKey,
   totalStats,
+  updateSetInSessions,
 } from "./sessions";
 
 function makeSet(overrides: Partial<LoggedSet> = {}): LoggedSet {
@@ -233,6 +236,236 @@ describe("removeSetFromSessions", () => {
     const session = makeSession();
 
     expect(removeSetFromSessions([session], session.id, "Bench Press", "nope")).toEqual([session]);
+  });
+});
+
+describe("updateSetInSessions", () => {
+  it("overwrites the targeted set's reps and weight, keeping id and order", () => {
+    const session = makeSession({
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet(), makeSet({ id: "set-2", weight: 85 })] },
+      ],
+    });
+
+    const result = updateSetInSessions([session], session.id, "Bench Press", "set-1", {
+      reps: 6,
+      weight: 90,
+    });
+
+    expect(result[0].entries[0].sets).toEqual([
+      { id: "set-1", reps: 6, weight: 90 },
+      { id: "set-2", reps: 8, weight: 85 },
+    ]);
+  });
+
+  it("leaves other sessions untouched by reference", () => {
+    const unrelated = makeSession({ id: "other" });
+    const session = makeSession();
+
+    const result = updateSetInSessions([unrelated, session], session.id, "Bench Press", "set-1", {
+      reps: 6,
+      weight: 90,
+    });
+
+    expect(result[0]).toBe(unrelated);
+    expect(result[1]).not.toBe(session);
+  });
+
+  it("returns the same array reference when session, exercise, or set is unknown", () => {
+    const sessions = [makeSession()];
+
+    expect(
+      updateSetInSessions(sessions, "nope", "Bench Press", "set-1", { reps: 6, weight: 90 }),
+    ).toBe(sessions);
+    expect(
+      updateSetInSessions(sessions, "session-1", "Squat", "set-1", { reps: 6, weight: 90 }),
+    ).toBe(sessions);
+    expect(
+      updateSetInSessions(sessions, "session-1", "Bench Press", "nope", { reps: 6, weight: 90 }),
+    ).toBe(sessions);
+  });
+
+  it("returns the same array reference when the values are unchanged", () => {
+    const sessions = [makeSession()];
+
+    expect(
+      updateSetInSessions(sessions, "session-1", "Bench Press", "set-1", { reps: 8, weight: 80 }),
+    ).toBe(sessions);
+  });
+});
+
+describe("removeSetWithUndo", () => {
+  it("removes exactly what removeSetFromSessions removes", () => {
+    const session = makeSession({
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet(), makeSet({ id: "set-2", weight: 85 })] },
+      ],
+    });
+
+    const result = removeSetWithUndo([session], session.id, "Bench Press", "set-1");
+
+    expect(result.sessions).toEqual(
+      removeSetFromSessions([session], session.id, "Bench Press", "set-1"),
+    );
+  });
+
+  it("captures the removed set, its containers' identity, and all indices", () => {
+    const other = makeSession({ id: "other", dayId: "day-2" });
+    const session = makeSession({
+      entries: [
+        { exercise: "Squat", sets: [makeSet({ id: "squat-1" })] },
+        { exercise: "Bench Press", sets: [makeSet(), makeSet({ id: "set-2", weight: 85 })] },
+      ],
+    });
+
+    const { removed } = removeSetWithUndo([other, session], session.id, "Bench Press", "set-2");
+
+    expect(removed).toEqual({
+      session: {
+        id: session.id,
+        dayId: session.dayId,
+        dayLabel: session.dayLabel,
+        dateKey: session.dateKey,
+        startedAt: session.startedAt,
+      },
+      exercise: "Bench Press",
+      set: { id: "set-2", reps: 8, weight: 85 },
+      sessionIndex: 1,
+      entryIndex: 1,
+      setIndex: 1,
+    });
+  });
+
+  it("returns null and the same array reference when nothing matched", () => {
+    const sessions = [makeSession()];
+
+    const result = removeSetWithUndo(sessions, "session-1", "Bench Press", "nope");
+
+    expect(result.removed).toBeNull();
+    expect(result.sessions).toBe(sessions);
+  });
+});
+
+function removeAndRestore(sessions: Session[], sessionId: string, exercise: string, setId: string) {
+  const { sessions: after, removed } = removeSetWithUndo(sessions, sessionId, exercise, setId);
+  if (!removed) throw new Error("expected a removal");
+  return restoreRemovedSet(after, removed);
+}
+
+describe("restoreRemovedSet", () => {
+  it("round-trips a middle set back to its original position", () => {
+    const session = makeSession({
+      entries: [
+        {
+          exercise: "Bench Press",
+          sets: [makeSet(), makeSet({ id: "set-2", weight: 85 }), makeSet({ id: "set-3" })],
+        },
+      ],
+    });
+
+    expect(removeAndRestore([session], session.id, "Bench Press", "set-2")).toEqual([session]);
+  });
+
+  it("round-trips an entry's last set, recreating the entry at its original index", () => {
+    const session = makeSession({
+      entries: [
+        { exercise: "Squat", sets: [makeSet({ id: "squat-1" })] },
+        { exercise: "Bench Press", sets: [makeSet()] },
+        { exercise: "Row", sets: [makeSet({ id: "row-1" })] },
+      ],
+    });
+
+    expect(removeAndRestore([session], session.id, "Bench Press", "set-1")).toEqual([session]);
+  });
+
+  it("round-trips a session's last set, recreating the session with its identity", () => {
+    const older = makeSession({ id: "older", dateKey: "2026-07-18" });
+    const session = makeSession();
+    const newer = makeSession({ id: "newer", dateKey: "2026-07-22" });
+
+    const result = removeAndRestore([older, session, newer], session.id, "Bench Press", "set-1");
+
+    expect(result).toEqual([older, session, newer]);
+  });
+
+  it("merges into the (dayId, dateKey) session even after its id changed", () => {
+    const session = makeSession();
+    const { sessions: pruned, removed } = removeSetWithUndo(
+      [session],
+      session.id,
+      "Bench Press",
+      "set-1",
+    );
+    if (!removed) throw new Error("expected a removal");
+    // The pruned session gets recreated by a later addSet under a new id.
+    const recreated = addSetToSessions(
+      pruned,
+      { ...removed.session, id: "new-session" },
+      "Squat",
+      makeSet({ id: "squat-1" }),
+    );
+
+    const result = restoreRemovedSet(recreated, removed);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("new-session");
+    expect(result[0].entries).toEqual([
+      { exercise: "Bench Press", sets: [makeSet()] },
+      { exercise: "Squat", sets: [makeSet({ id: "squat-1" })] },
+    ]);
+  });
+
+  it("clamps a stale set index beyond the current length", () => {
+    const session = makeSession({
+      entries: [
+        {
+          exercise: "Bench Press",
+          sets: [makeSet(), makeSet({ id: "set-2" }), makeSet({ id: "set-3" })],
+        },
+      ],
+    });
+    const { sessions: after, removed } = removeSetWithUndo(
+      [session],
+      session.id,
+      "Bench Press",
+      "set-3",
+    );
+    if (!removed) throw new Error("expected a removal");
+    // The sets before the removed one disappear before the undo fires.
+    const shrunk = removeSetFromSessions(
+      removeSetFromSessions(after, session.id, "Bench Press", "set-1"),
+      session.id,
+      "Bench Press",
+      "set-2",
+    );
+
+    const result = restoreRemovedSet(shrunk, removed);
+
+    expect(result[0].entries[0].sets.map((s) => s.id)).toEqual(["set-3"]);
+  });
+
+  it("is a no-op returning the same reference when the set already exists", () => {
+    const session = makeSession();
+    const { removed } = removeSetWithUndo([session], session.id, "Bench Press", "set-1");
+    if (!removed) throw new Error("expected a removal");
+    const sessions = [session];
+
+    expect(restoreRemovedSet(sessions, removed)).toBe(sessions);
+  });
+
+  it("restores two removals LIFO back to the original array", () => {
+    const session = makeSession({
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet(), makeSet({ id: "set-2", weight: 85 })] },
+      ],
+    });
+    const first = removeSetWithUndo([session], session.id, "Bench Press", "set-1");
+    const second = removeSetWithUndo(first.sessions, session.id, "Bench Press", "set-2");
+    if (!first.removed || !second.removed) throw new Error("expected removals");
+
+    const result = [second.removed, first.removed].reduce(restoreRemovedSet, second.sessions);
+
+    expect(result).toEqual([session]);
   });
 });
 
