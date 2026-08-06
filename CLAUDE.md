@@ -22,10 +22,13 @@ pnpm perf:latency   # TTFB p50/p95 smoke against $PERF_BASE_URL (staging/preview
 
 **Tests are [vitest](https://vitest.dev) unit tests** covering the pure logic
 in `lib/` (`sessions.test.ts`, `backup.test.ts`, `workouts.test.ts`,
-`rest-timer.test.ts`): payload validation (including hostile/prototype-pollution
-payloads), session mutations (`addSetToSessions`/`removeSetFromSessions`),
-"last time" lookup, stats aggregation, input parsing, date keying, backup
-round-trip/merge, and plan-data invariants. No config file — vitest defaults
+`rest-timer.test.ts`, `adherence.test.ts`, `theme.test.ts`): payload validation
+(including hostile/prototype-pollution payloads), session mutations
+(`addSetToSessions`/`removeSetFromSessions`/`updateSetInSessions`/
+`removeSetWithUndo`+`restoreRemovedSet`), "last time" lookup, stats
+aggregation, plan-adherence progress, input parsing, date keying, backup
+round-trip/merge, theme resolution (including executing the inline
+`THEME_INIT_SCRIPT` against stubbed globals), and plan-data invariants. No config file — vitest defaults
 (node environment) suffice because the tested layer is IO-free. Tests import
 from `"vitest"` explicitly; there is no globals setup. Keep component logic
 extractable: pure state transitions live in `lib/`, providers stay thin.
@@ -49,15 +52,16 @@ next's transitive `postcss`/`sharp` pins on patched versions.
 **Rep Track** — a single-page Next.js 16 App Router app (React 19, RSC) that renders a fixed weekly workout plan and lets the user log sets per training day locally. Originally scaffolded by **v0.app** (`generator: 'v0.app'`).
 
 - **`lib/workouts.ts` is the source of truth for the displayed plan.** The `workouts` array (a `WorkoutDay[]`) is hard-coded here, along with the `Exercise`/`Movement` types and `movementLabels`. To change what exercises/days/sets/reps appear, edit this array — there is no backend or CMS.
-- **`app/page.tsx`** (server component) maps over `workouts` and renders a `WorkoutCard` per day. `app/layout.tsx` sets fonts (Geist), metadata/icons, wraps the app in `<SessionProvider>`, and mounts Vercel Analytics unconditionally (outside production it runs in debug mode and sends nothing).
+- **`app/page.tsx`** (server component) maps over `workouts` and renders a `WorkoutCard` per day. `app/layout.tsx` sets fonts (Geist), metadata/icons, injects the pre-paint `THEME_INIT_SCRIPT`, wraps the app in `<ThemeProvider>` → `<SessionProvider>` → `<RestTimerProvider>`, and mounts Vercel Analytics unconditionally (outside production it runs in debug mode and sends nothing). Pages: `/` (plan), `/history`, `/stats`, `/settings` (appearance + rest-timer preferences); the shared header nav is `components/page-nav.tsx` (server, `current` prop).
 - **`components/workout-card.tsx`** (server) derives per-day stats (planned total sets/reps, push/pull counts) from the day's exercises, renders the `DaySessionSummary`, and lists `ExerciseRow`s.
-- **`components/exercise-row.tsx`** (client) owns the per-exercise logging UI: an expandable panel to add sets (weight + reps), today's logged sets, and a per-set "last time" reference for progressive overload.
+- **`components/exercise-row.tsx`** (client) owns the per-exercise logging UI: an expandable panel to add sets (weight + reps), today's logged sets with inline editing (pencil → compact weight/reps inputs; saving never starts the rest timer), and a per-set "last time" reference for progressive overload.
+- **Plan adherence lives in `lib/adherence.ts`** — the join of the plan (`lib/workouts.ts`) and the logged sessions, kept out of `lib/sessions.ts` so the session model stays plan-agnostic. `exerciseProgress` drives the "2/4 sets" chip on each row; `dayProgress` (per-exercise clamped, so extras can't mask a skipped lift) drives the day card's progress bar and "Workout complete" state.
 
 ### Session tracking (the core feature)
 
 Logging is organized around **training-day sessions**, not loose per-exercise entries. The model lives in **`lib/sessions.ts`** (`Session` → `ExerciseEntry` → `LoggedSet`): one `Session` per `(dayId, calendar date)`, each holding the sets logged for each exercise that day. All state flows through one React context:
 
-- **`components/session-provider.tsx`** (client) is the single owner of session state and the only writer to `localStorage` (key `rep-track-sessions-v1`). It exposes `useSessions()` with `addSet` / `removeSet` / `todaySession` / `storageWarning`. `addSet` lazily creates today's session and the exercise entry; `removeSet` prunes empty entries and sessions.
+- **`components/session-provider.tsx`** (client) is the single owner of session state and the only writer to `localStorage` (key `rep-track-sessions-v1`). It exposes `useSessions()` with `addSet` / `removeSet` / `updateSet` / `todaySession` / `storageWarning`. `addSet` lazily creates today's session and the exercise entry; `removeSet` prunes empty entries and sessions, and is undoable: the provider keeps a pending-removal stack and renders `components/undo-toast.tsx` (6 s window, batch undo via `restoreRemovedSet`, which re-targets by `(dayId, dateKey)` so undo survives session-id churn).
 - **localStorage is treated as a trust boundary.** `parseSessionsBlob()` in `lib/sessions.ts` runtime-validates every stored session (invalid ones are dropped individually); when anything is rejected, the raw payload is first copied to `rep-track-sessions-v1-corrupt` so a later save can't destroy it. `saveSessions` returns a typed result instead of throwing; failures and recoveries surface through `storageWarning`, which drives a `role="alert"` banner rendered by the provider. A `storage` event listener keeps multiple tabs in sync, and a `lastSavedRef` identity check ensures only genuine user mutations are written back (never the mount-time load or another tab's echo).
 - Consume sessions via `useSessions()` from any client component — **never read `localStorage` directly elsewhere.** `ExerciseRow` and `DaySessionSummary` are consumers.
 - **Context flows through server components**: `SessionProvider` (client) wraps `WorkoutCard` (server) which renders `ExerciseRow`/`DaySessionSummary` (client) — the consumers still receive the context because they're in the provider's subtree in the final React tree.
@@ -66,6 +70,8 @@ Logging is organized around **training-day sessions**, not loose per-exercise en
 ### Hydration-safe localStorage
 
 The whole app SSR-prerenders, so anything derived from `localStorage` must be gated to avoid hydration mismatch: `SessionProvider` reads on mount and only writes after a `hydrated` flag flips, and consumers check `hydrated` before rendering session-derived content (initial client render must match the empty-state server render). Reuse this pattern for any new client persistence.
+
+The **theme** is the one deliberate exception to "apply after hydration": `lib/theme.ts` exports `THEME_INIT_SCRIPT`, inlined as the first child of `<body>` in `app/layout.tsx`, which toggles the `dark` class on `<html>` before first paint (no light flash on a stored dark preference; `<html>` carries `suppressHydrationWarning` for this). `components/theme-provider.tsx` then owns the preference after mount — localStorage key `rep-track-theme` (validated by `parseStoredTheme`, garbage degrades to `system`), a `matchMedia` listener for live OS changes, and a `storage` listener for cross-tab sync. The script and `resolveTheme(parseStoredTheme(raw) ?? DEFAULT_THEME, systemDark)` must stay semantically identical — the test suite executes the script string to enforce it.
 
 ### Styling
 
