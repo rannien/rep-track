@@ -290,6 +290,30 @@ export function removeSetWithUndo(
   return { sessions: removeSetFromSessions(sessions, sessionId, exercise, setId), removed };
 }
 
+// Remove a whole session as a sequence of per-set removals, so the same undo
+// machinery that restores one deleted set restores the entire session (LIFO
+// via restoreRemovedSet). `removed` is empty — and `sessions` returned as the
+// same reference — when the id is unknown.
+export function removeSessionWithUndo(
+  sessions: Session[],
+  sessionId: string,
+): { sessions: Session[]; removed: SetRemoval[] } {
+  const session = sessions.find((s) => s.id === sessionId);
+  if (!session) return { sessions, removed: [] };
+  let current = sessions;
+  const removed: SetRemoval[] = [];
+  for (const entry of session.entries) {
+    for (const set of entry.sets) {
+      const step = removeSetWithUndo(current, sessionId, entry.exercise, set.id);
+      if (step.removed) {
+        removed.push(step.removed);
+        current = step.sessions;
+      }
+    }
+  }
+  return { sessions: current, removed };
+}
+
 // Reinsert a captured removal. The session is looked up by (dayId, dateKey) —
 // the same key addSetToSessions uses — so undoing after the pruned session was
 // recreated under a new id never yields two sessions for one (day, date). A

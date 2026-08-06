@@ -22,6 +22,7 @@ import {
   backdatedSessionStart,
   loadSessions,
   parseSessionsBlob,
+  removeSessionWithUndo,
   removeSetWithUndo,
   restoreRemovedSet,
   saveSessions,
@@ -53,6 +54,8 @@ type SessionContextValue = {
   ) => void;
   /** Delete a set. Undoable for a few seconds via the provider's toast. */
   removeSet: (sessionId: string, exercise: string, setId: string) => void;
+  /** Delete a whole session; one Undo brings every set back. */
+  removeSession: (sessionId: string) => void;
   /** Correct a logged set's reps/weight in place. */
   updateSet: (
     sessionId: string,
@@ -195,6 +198,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [sessions],
   );
 
+  const removeSession = useCallback(
+    (sessionId: string) => {
+      const { sessions: next, removed } = removeSessionWithUndo(sessions, sessionId);
+      if (removed.length === 0) return;
+      setSessions(next);
+      setPendingRemovals((prev) => [...prev, ...removed]);
+    },
+    [sessions],
+  );
+
   const updateSet = useCallback(
     (
       sessionId: string,
@@ -222,6 +235,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       sessionOn,
       addSet,
       removeSet,
+      removeSession,
       updateSet,
       replaceAllSessions,
       storageWarning,
@@ -233,6 +247,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       sessionOn,
       addSet,
       removeSet,
+      removeSession,
       updateSet,
       replaceAllSessions,
       storageWarning,

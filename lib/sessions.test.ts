@@ -24,6 +24,7 @@ import {
   parseSessionsBlob,
   parseWeightInput,
   personalRecords,
+  removeSessionWithUndo,
   removeSetFromSessions,
   removeSetWithUndo,
   restoreRemovedSet,
@@ -353,6 +354,47 @@ function removeAndRestore(sessions: Session[], sessionId: string, exercise: stri
   if (!removed) throw new Error("expected a removal");
   return restoreRemovedSet(after, removed);
 }
+
+describe("removeSessionWithUndo", () => {
+  it("removes the whole session and leaves others untouched by reference", () => {
+    const unrelated = makeSession({ id: "other", dayId: "day-2" });
+    const session = makeSession({
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet(), makeSet({ id: "set-2", weight: 85 })] },
+        { exercise: "Squat", sets: [makeSet({ id: "set-3", weight: 100 })] },
+      ],
+    });
+
+    const result = removeSessionWithUndo([unrelated, session], session.id);
+
+    expect(result.sessions).toEqual([unrelated]);
+    expect(result.sessions[0]).toBe(unrelated);
+    expect(result.removed).toHaveLength(3);
+  });
+
+  it("round-trips: LIFO-restoring the removals rebuilds the original array", () => {
+    const before = makeSession({
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet(), makeSet({ id: "set-2", weight: 85 })] },
+        { exercise: "Squat", sets: [makeSet({ id: "set-3", weight: 100 })] },
+      ],
+    });
+
+    const { sessions: after, removed } = removeSessionWithUndo([before], before.id);
+    const restored = removed.reduceRight(restoreRemovedSet, after);
+
+    expect(restored).toEqual([before]);
+  });
+
+  it("returns the same reference and no removals for an unknown session", () => {
+    const sessions = [makeSession()];
+
+    const result = removeSessionWithUndo(sessions, "nope");
+
+    expect(result.sessions).toBe(sessions);
+    expect(result.removed).toEqual([]);
+  });
+});
 
 describe("restoreRemovedSet", () => {
   it("round-trips a middle set back to its original position", () => {
