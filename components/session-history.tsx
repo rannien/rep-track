@@ -300,12 +300,17 @@ function EditableSets({
         return (
           <li
             key={set.id}
-            className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-1.5"
+            className={cn(
+              "rounded-lg border border-border px-3",
+              // Editing lays out as two rows (inputs, then ×2 + actions) —
+              // one line can't fit it all at 375px.
+              isEditing
+                ? "flex flex-col gap-2 py-2"
+                : "flex items-center justify-between gap-2 py-1.5",
+            )}
           >
             {isEditing ? (
-              // flex-wrap: at 375px the ×2 chip wraps below the inputs
-              // instead of colliding with the action buttons.
-              <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm tabular-nums text-card-foreground">
+              <span className="flex items-center gap-2 text-sm tabular-nums text-card-foreground">
                 <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
                   {i + 1}
                 </span>
@@ -346,13 +351,26 @@ function EditableSets({
                     className="w-16 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </label>
+              </span>
+            ) : (
+              <span className="flex min-w-0 items-center gap-2 text-sm tabular-nums text-card-foreground">
+                <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
+                  {i + 1}
+                </span>
+                <span className="shrink-0 whitespace-nowrap font-medium">
+                  {formatSet(set, unit)}
+                </span>
+              </span>
+            )}
+            {isEditing ? (
+              <span className="flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => setEditDouble((prev) => !prev)}
                   aria-pressed={editDouble}
                   aria-label={`Two dumbbells for set ${i + 1} — counts double`}
                   className={cn(
-                    "inline-flex h-7 shrink-0 items-center justify-center rounded-md border px-1.5 text-xs font-semibold tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    "inline-flex h-7 shrink-0 items-center justify-center rounded-md border px-2 text-xs font-semibold tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                     editDouble
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card text-muted-foreground hover:bg-secondary/60",
@@ -360,18 +378,7 @@ function EditableSets({
                 >
                   ×2
                 </button>
-              </span>
-            ) : (
-              <span className="flex items-center gap-2 text-sm tabular-nums text-card-foreground">
-                <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
-                  {i + 1}
-                </span>
-                <span className="font-medium">{formatSet(set, unit)}</span>
-              </span>
-            )}
-            <span className="flex shrink-0 items-center gap-1">
-              {isEditing ? (
-                <>
+                <span className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => saveEdit(i + 1)}
@@ -389,28 +396,28 @@ function EditableSets({
                   >
                     <X className="size-3.5" aria-hidden="true" />
                   </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => beginEdit(set)}
-                    aria-label={`Edit set ${i + 1}`}
-                    className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <Pencil className="size-3.5" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeSet(session.id, entry.exercise, set.id)}
-                    aria-label={`Remove set ${i + 1}`}
-                    className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <Trash2 className="size-3.5" aria-hidden="true" />
-                  </button>
-                </>
-              )}
-            </span>
+                </span>
+              </span>
+            ) : (
+              <span className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => beginEdit(set)}
+                  aria-label={`Edit set ${i + 1}`}
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <Pencil className="size-3.5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeSet(session.id, entry.exercise, set.id)}
+                  aria-label={`Remove set ${i + 1}`}
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <Trash2 className="size-3.5" aria-hidden="true" />
+                </button>
+              </span>
+            )}
           </li>
         );
       })}
