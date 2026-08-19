@@ -2,6 +2,17 @@
 
 Notable user-facing changes to Rep Track. Dates are release days on `main`.
 
+## 2026-08-19
+
+### Added
+
+- **×2 toggle for dual-dumbbell / both-arm sets** — walking lunges with two 16 kg dumbbells no
+  longer undercount: keep typing the per-dumbbell weight and flip the ×2 chip next to the inputs.
+  The set reads "2×16 kg × 8", volume and the muscle chart count the real 32 kg per rep, and
+  Personal Records rank by total load (2×16 kg beats a single 30 kg). Estimated 1RM stays
+  per-dumbbell on purpose. The toggle is also in both edit modes, so past sets can be fixed from
+  the History page.
+
 ## 2026-08-06
 
 A big day: two feature phases plus follow-up fixes.
