@@ -76,6 +76,15 @@ export default function RootLayout({
             </SessionProvider>
           </UnitProvider>
         </ThemeProvider>
+        {/* Site footer on every page. Emoji are decorative for assistive
+            tech; the sr-only words make it read "Made with love and AI for
+            humans". */}
+        <footer className="mx-auto w-full max-w-5xl px-4 pb-8 text-center text-xs text-muted-foreground sm:px-6">
+          Made with <span aria-hidden="true">❤️</span>
+          <span className="sr-only">love</span> and <span aria-hidden="true">🤖</span>
+          <span className="sr-only">AI</span> for <span aria-hidden="true">👥</span>
+          <span className="sr-only">humans</span>
+        </footer>
         <ServiceWorkerRegistrar />
         {/* Dev-safe unconditionally: @vercel/analytics runs in debug mode
             outside production and sends nothing. */}
