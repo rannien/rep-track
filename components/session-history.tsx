@@ -351,19 +351,6 @@ function EditableSets({
                     className="w-16 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </label>
-              </span>
-            ) : (
-              <span className="flex min-w-0 items-center gap-2 text-sm tabular-nums text-card-foreground">
-                <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
-                  {i + 1}
-                </span>
-                <span className="shrink-0 whitespace-nowrap font-medium">
-                  {formatSet(set, unit)}
-                </span>
-              </span>
-            )}
-            {isEditing ? (
-              <span className="flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => setEditDouble((prev) => !prev)}
@@ -378,25 +365,36 @@ function EditableSets({
                 >
                   ×2
                 </button>
-                <span className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => saveEdit(i + 1)}
-                    disabled={!canSave}
-                    aria-label={`Save changes to set ${i + 1}`}
-                    className="inline-flex size-7 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Check className="size-3.5" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditingSetId(null)}
-                    aria-label={`Cancel editing set ${i + 1}`}
-                    className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-card-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <X className="size-3.5" aria-hidden="true" />
-                  </button>
+              </span>
+            ) : (
+              <span className="flex min-w-0 items-center gap-2 text-sm tabular-nums text-card-foreground">
+                <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
+                  {i + 1}
                 </span>
+                <span className="shrink-0 whitespace-nowrap font-medium">
+                  {formatSet(set, unit)}
+                </span>
+              </span>
+            )}
+            {isEditing ? (
+              <span className="flex items-center justify-end gap-1">
+                <button
+                  type="button"
+                  onClick={() => saveEdit(i + 1)}
+                  disabled={!canSave}
+                  aria-label={`Save changes to set ${i + 1}`}
+                  className="inline-flex size-7 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Check className="size-3.5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingSetId(null)}
+                  aria-label={`Cancel editing set ${i + 1}`}
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-card-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <X className="size-3.5" aria-hidden="true" />
+                </button>
               </span>
             ) : (
               <span className="flex shrink-0 items-center gap-1">

@@ -385,6 +385,20 @@ export function ExerciseRow({
                               className="w-16 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             />
                           </label>
+                          <button
+                            type="button"
+                            onClick={() => setEditDouble((prev) => !prev)}
+                            aria-pressed={editDouble}
+                            aria-label={`Two dumbbells for set ${i + 1} — counts double`}
+                            className={cn(
+                              "inline-flex h-7 shrink-0 items-center justify-center rounded-md border px-2 text-xs font-semibold tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                              editDouble
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-card text-muted-foreground hover:bg-secondary/60",
+                            )}
+                          >
+                            ×2
+                          </button>
                         </span>
                       ) : (
                         <span className="flex min-w-0 items-center gap-2 text-sm tabular-nums text-card-foreground">
@@ -404,40 +418,24 @@ export function ExerciseRow({
                         </span>
                       )}
                       {editing ? (
-                        <span className="flex items-center justify-between gap-2">
+                        <span className="flex items-center justify-end gap-1">
                           <button
                             type="button"
-                            onClick={() => setEditDouble((prev) => !prev)}
-                            aria-pressed={editDouble}
-                            aria-label={`Two dumbbells for set ${i + 1} — counts double`}
-                            className={cn(
-                              "inline-flex h-7 shrink-0 items-center justify-center rounded-md border px-2 text-xs font-semibold tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                              editDouble
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-border bg-card text-muted-foreground hover:bg-secondary/60",
-                            )}
+                            onClick={() => saveEdit(i + 1)}
+                            disabled={!canSaveEdit}
+                            aria-label={`Save changes to set ${i + 1}`}
+                            className="inline-flex size-7 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            ×2
+                            <Check className="size-3.5" aria-hidden="true" />
                           </button>
-                          <span className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => saveEdit(i + 1)}
-                              disabled={!canSaveEdit}
-                              aria-label={`Save changes to set ${i + 1}`}
-                              className="inline-flex size-7 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              <Check className="size-3.5" aria-hidden="true" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={cancelEdit}
-                              aria-label={`Cancel editing set ${i + 1}`}
-                              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-card-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            >
-                              <X className="size-3.5" aria-hidden="true" />
-                            </button>
-                          </span>
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            aria-label={`Cancel editing set ${i + 1}`}
+                            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-card-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                          >
+                            <X className="size-3.5" aria-hidden="true" />
+                          </button>
                         </span>
                       ) : (
                         <span className="flex shrink-0 items-center gap-1">
