@@ -97,6 +97,7 @@ export function PrBoard() {
                       className="size-3.5 text-amber-600 dark:text-amber-400"
                       aria-hidden="true"
                     />
+                    {record.set.double ? "2×" : ""}
                     {formatWeight(record.set.weight, unit)}
                   </span>
                   <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">

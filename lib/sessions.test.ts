@@ -30,6 +30,7 @@ import {
   restoreRemovedSet,
   sessionSeries,
   sessionStats,
+  setLoad,
   todayKey,
   totalStats,
   updateSetInSessions,
@@ -113,6 +114,27 @@ describe("parseSessionsBlob", () => {
       "id",
       "startedAt",
     ]);
+  });
+
+  it("keeps a double flag only when it is the literal true", () => {
+    const doubled = makeSession({
+      entries: [{ exercise: "Walking Lunges", sets: [{ ...makeSet(), double: true }] }],
+    });
+    // Object.assign mutates the fresh fixtures makeSession/makeSet return.
+    const junkFlags = [false, "yes", 1].map(
+      (double, i) =>
+        Object.assign(makeSession({ id: `junk-${i}` }), {
+          entries: [{ exercise: "Squat", sets: [Object.assign(makeSet(), { double })] }],
+        }) as unknown,
+    );
+
+    const result = parseSessionsBlob(JSON.stringify([doubled, ...junkFlags]));
+
+    expect(result.kind).toBe("ok");
+    expect(result.sessions[0].entries[0].sets[0].double).toBe(true);
+    for (const session of result.sessions.slice(1)) {
+      expect(session.entries[0].sets[0]).not.toHaveProperty("double");
+    }
   });
 
   it("rejects sessions with malformed fields", () => {
@@ -294,6 +316,37 @@ describe("updateSetInSessions", () => {
     expect(
       updateSetInSessions(sessions, "session-1", "Bench Press", "set-1", { reps: 8, weight: 80 }),
     ).toBe(sessions);
+  });
+
+  it("toggles the double flag on and off", () => {
+    const sessions = [makeSession()];
+
+    const doubled = updateSetInSessions(sessions, "session-1", "Bench Press", "set-1", {
+      reps: 8,
+      weight: 80,
+      double: true,
+    });
+    expect(doubled[0].entries[0].sets[0]).toEqual({
+      id: "set-1",
+      reps: 8,
+      weight: 80,
+      double: true,
+    });
+
+    const single = updateSetInSessions(doubled, "session-1", "Bench Press", "set-1", {
+      reps: 8,
+      weight: 80,
+    });
+    expect(single[0].entries[0].sets[0]).toEqual({ id: "set-1", reps: 8, weight: 80 });
+
+    // Unchanged including the flag → same reference.
+    expect(
+      updateSetInSessions(doubled, "session-1", "Bench Press", "set-1", {
+        reps: 8,
+        weight: 80,
+        double: true,
+      }),
+    ).toBe(doubled);
   });
 });
 
@@ -539,6 +592,47 @@ describe("personalRecords", () => {
         startedAt: "2026-07-18T10:00:00.000Z",
       },
     ]);
+  });
+
+  it("counts both implements of a doubled set toward the record", () => {
+    const session = makeSession({
+      entries: [
+        {
+          exercise: "Walking Lunges",
+          // 2×16 kg = 32 kg total beats a single 30 kg.
+          sets: [
+            makeSet({ id: "single", weight: 30 }),
+            { ...makeSet({ id: "dual", weight: 16 }), double: true as const },
+          ],
+        },
+      ],
+    });
+
+    const records = personalRecords([session]);
+
+    expect(records[0].set.id).toBe("dual");
+    expect(records[0].set.double).toBe(true);
+  });
+
+  it("resolves an equal load by reps, keeping the first achievement otherwise", () => {
+    const dual = makeSession({
+      id: "a",
+      startedAt: "2026-07-10T10:00:00.000Z",
+      entries: [
+        {
+          exercise: "Walking Lunges",
+          sets: [{ ...makeSet({ id: "dual", weight: 15 }), double: true as const }],
+        },
+      ],
+    });
+    const single = makeSession({
+      id: "b",
+      startedAt: "2026-07-18T10:00:00.000Z",
+      entries: [{ exercise: "Walking Lunges", sets: [makeSet({ id: "single", weight: 30 })] }],
+    });
+
+    // Equal 30 kg load, equal reps → the earlier dual set keeps the record.
+    expect(personalRecords([single, dual])[0].set.id).toBe("dual");
   });
 
   it("picks the actual weight, not the highest estimated 1RM", () => {
@@ -1001,5 +1095,21 @@ describe("date formatting", () => {
     expect(formatSet({ weight: 80, reps: 8 }, "kg")).toBe("80 kg × 8");
     expect(formatSet({ weight: 0, reps: 12 }, "kg")).toBe("0 kg × 12");
     expect(formatSet({ weight: 45.359, reps: 8 }, "lb")).toBe("100 lb × 8");
+    expect(formatSet({ weight: 16, reps: 8, double: true }, "kg")).toBe("2×16 kg × 8");
+    expect(formatSet({ weight: 16, reps: 8, double: true }, "lb")).toBe("2×35.27 lb × 8");
+  });
+
+  it("computes the moved load, doubling only flagged sets", () => {
+    expect(setLoad({ weight: 16, double: true })).toBe(32);
+    expect(setLoad({ weight: 16 })).toBe(16);
+    expect(
+      entryVolume({
+        exercise: "Walking Lunges",
+        sets: [
+          makeSet({ weight: 16, reps: 10 }),
+          { ...makeSet({ id: "d", weight: 16, reps: 10 }), double: true as const },
+        ],
+      }),
+    ).toBe(16 * 10 + 32 * 10);
   });
 });

@@ -49,19 +49,19 @@ type SessionContextValue = {
   addSet: (
     day: DayRef,
     exercise: string,
-    set: { reps: number; weight: number },
+    set: { reps: number; weight: number; double?: boolean },
     dateKey?: string,
   ) => void;
   /** Delete a set. Undoable for a few seconds via the provider's toast. */
   removeSet: (sessionId: string, exercise: string, setId: string) => void;
   /** Delete a whole session; one Undo brings every set back. */
   removeSession: (sessionId: string) => void;
-  /** Correct a logged set's reps/weight in place. */
+  /** Correct a logged set's reps/weight/double in place. */
   updateSet: (
     sessionId: string,
     exercise: string,
     setId: string,
-    values: { reps: number; weight: number },
+    values: { reps: number; weight: number; double?: boolean },
   ) => void;
   /** Overwrite the whole history — the apply step of a backup import. */
   replaceAllSessions: (sessions: Session[]) => void;
@@ -156,11 +156,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const todaySession = useCallback((dayId: string) => sessionOn(dayId, todayKey()), [sessionOn]);
 
   const addSet = useCallback(
-    (day: DayRef, exercise: string, set: { reps: number; weight: number }, dateKey?: string) => {
+    (
+      day: DayRef,
+      exercise: string,
+      set: { reps: number; weight: number; double?: boolean },
+      dateKey?: string,
+    ) => {
       const newSet: LoggedSet = {
         id: crypto.randomUUID(),
         reps: set.reps,
         weight: set.weight,
+        ...(set.double === true ? { double: true as const } : {}),
       };
       const key = dateKey ?? todayKey();
       // The session identity is only used if the day's session doesn't exist
@@ -213,7 +219,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       sessionId: string,
       exercise: string,
       setId: string,
-      values: { reps: number; weight: number },
+      values: { reps: number; weight: number; double?: boolean },
     ) => {
       setSessions((prev) => updateSetInSessions(prev, sessionId, exercise, setId, values));
     },

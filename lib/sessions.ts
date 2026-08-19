@@ -7,7 +7,10 @@ import { type WeightUnit, formatWeight, weightFromKg, weightToKg } from "./units
 export type LoggedSet = {
   id: string;
   reps: number;
-  weight: number; // kg; 0 = bodyweight / not recorded
+  weight: number; // kg per implement; 0 = bodyweight / not recorded
+  // Two implements at once (a dumbbell per hand): the moved load is
+  // weight × 2. Present only when on, so existing payloads stay valid.
+  double?: true;
 };
 
 export type ExerciseEntry = {
@@ -45,11 +48,12 @@ function isNonEmptyString(value: unknown): value is string {
 
 function parseLoggedSet(value: unknown): LoggedSet | null {
   if (!isRecord(value)) return null;
-  const { id, reps, weight } = value;
+  const { id, reps, weight, double } = value;
   if (!isNonEmptyString(id)) return null;
   if (typeof reps !== "number" || !Number.isInteger(reps) || reps <= 0) return null;
   if (typeof weight !== "number" || !Number.isFinite(weight) || weight < 0) return null;
-  return { id, reps, weight };
+  // Only the literal true survives; anything else degrades to single loading.
+  return { id, reps, weight, ...(double === true ? { double: true as const } : {}) };
 }
 
 function parseExerciseEntry(value: unknown): ExerciseEntry | null {
@@ -216,16 +220,16 @@ export function removeSetFromSessions(
     .filter((s) => s.entries.length > 0);
 }
 
-// Overwrite one logged set's reps/weight in place, preserving its id and
-// position. Only the changed path gets new references; nothing matching — or
-// values that already hold — returns `sessions` itself, so a no-op edit never
-// triggers a save.
+// Overwrite one logged set's reps/weight/double in place, preserving its id
+// and position. Only the changed path gets new references; nothing matching —
+// or values that already hold — returns `sessions` itself, so a no-op edit
+// never triggers a save.
 export function updateSetInSessions(
   sessions: Session[],
   sessionId: string,
   exercise: string,
   setId: string,
-  values: { reps: number; weight: number },
+  values: { reps: number; weight: number; double?: boolean },
 ): Session[] {
   const sessionIdx = sessions.findIndex((s) => s.id === sessionId);
   if (sessionIdx === -1) return sessions;
@@ -236,9 +240,22 @@ export function updateSetInSessions(
   const setIdx = entry.sets.findIndex((set) => set.id === setId);
   if (setIdx === -1) return sessions;
   const set = entry.sets[setIdx];
-  if (set.reps === values.reps && set.weight === values.weight) return sessions;
+  const double = values.double === true;
+  if (
+    set.reps === values.reps &&
+    set.weight === values.weight &&
+    (set.double === true) === double
+  ) {
+    return sessions;
+  }
   const sets = entry.sets.slice();
-  sets[setIdx] = { ...set, reps: values.reps, weight: values.weight };
+  // Rebuilt rather than spread, so turning double off removes the key.
+  sets[setIdx] = {
+    id: set.id,
+    reps: values.reps,
+    weight: values.weight,
+    ...(double ? { double: true as const } : {}),
+  };
   const entries = session.entries.slice();
   entries[entryIdx] = { ...entry, sets };
   const next = sessions.slice();
@@ -384,9 +401,15 @@ export type SessionStats = {
   volume: number; // kg moved across the session: Σ weight × reps
 };
 
-// Volume (kg moved) for a single exercise entry: Σ weight × reps.
+// The external load one rep of a set actually moves: a doubled set (an
+// implement per hand) carries weight × 2. The single place doubling happens.
+export function setLoad(set: Pick<LoggedSet, "weight" | "double">): number {
+  return set.double ? set.weight * 2 : set.weight;
+}
+
+// Volume (kg moved) for a single exercise entry: Σ load × reps.
 export function entryVolume(entry: ExerciseEntry): number {
-  return entry.sets.reduce((sum, set) => sum + set.weight * set.reps, 0);
+  return entry.sets.reduce((sum, set) => sum + setLoad(set) * set.reps, 0);
 }
 
 // Estimated one-rep max via the Epley formula: w × (1 + reps/30). A well-
@@ -394,6 +417,9 @@ export function entryVolume(entry: ExerciseEntry): number {
 // it needs no hardware beyond the weight+reps already logged. A bodyweight set
 // (weight 0) has no external load to extrapolate, so it yields 0; a single rep
 // returns the weight itself. Rounded to 0.1 kg so values compare cleanly.
+// Deliberately per implement, ignoring `double`: 1RM estimates what one hand
+// could lift once — doubling would fake a 32 kg lunge 1RM out of 16 kg
+// dumbbells.
 export function estimatedOneRepMax(set: { weight: number; reps: number }): number {
   if (set.weight <= 0 || set.reps <= 0) return 0;
   // A single rep is already a 1RM — Epley only extrapolates multi-rep sets.
@@ -640,11 +666,12 @@ export type PersonalRecord = {
   startedAt: string; // when the record session happened
 };
 
-// All-time heaviest logged set per exercise — the actual lifted weight, not
-// an estimate. Sessions are scanned in chronological order; only a strictly
-// heavier set displaces the record (an equal weight only with more reps), so
-// ties keep the first achievement. Bodyweight-only exercises (weight 0)
-// never qualify. Sorted by weight descending, ties by name.
+// All-time heaviest logged set per exercise — the actual lifted load, not an
+// estimate. A doubled set counts both implements (2×16 kg = 32 beats a single
+// 30). Sessions are scanned in chronological order; only a strictly heavier
+// load displaces the record (an equal load only with more reps), so ties keep
+// the first achievement. Bodyweight-only exercises (weight 0) never qualify.
+// Sorted by load descending, ties by name.
 export function personalRecords(sessions: Session[]): PersonalRecord[] {
   const byExercise = new Map<string, PersonalRecord>();
   const chronological = sessions.toSorted((a, b) => a.startedAt.localeCompare(b.startedAt));
@@ -655,8 +682,8 @@ export function personalRecords(sessions: Session[]): PersonalRecord[] {
         const current = byExercise.get(entry.exercise);
         if (
           current &&
-          (set.weight < current.set.weight ||
-            (set.weight === current.set.weight && set.reps <= current.set.reps))
+          (setLoad(set) < setLoad(current.set) ||
+            (setLoad(set) === setLoad(current.set) && set.reps <= current.set.reps))
         ) {
           continue;
         }
@@ -669,7 +696,7 @@ export function personalRecords(sessions: Session[]): PersonalRecord[] {
     }
   }
   return [...byExercise.values()].toSorted(
-    (a, b) => b.set.weight - a.set.weight || a.exercise.localeCompare(b.exercise),
+    (a, b) => setLoad(b.set) - setLoad(a.set) || a.exercise.localeCompare(b.exercise),
   );
 }
 
@@ -708,9 +735,13 @@ export function formatSessionDate(iso: string): string {
   });
 }
 
-// A logged set in the user's display unit; the stored weight is always kg.
-export function formatSet(set: { reps: number; weight: number }, unit: WeightUnit): string {
-  return `${formatWeight(set.weight, unit)} × ${set.reps}`;
+// A logged set in the user's display unit; the stored weight is always kg
+// per implement, so a doubled set reads "2×16 kg × 8".
+export function formatSet(
+  set: { reps: number; weight: number; double?: boolean },
+  unit: WeightUnit,
+): string {
+  return `${set.double ? "2×" : ""}${formatWeight(set.weight, unit)} × ${set.reps}`;
 }
 
 // Estimated 1RM (kg) as a compact display-unit label; drops a trailing ".0"

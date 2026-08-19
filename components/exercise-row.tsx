@@ -68,11 +68,14 @@ export function ExerciseRow({
   const open = openPanel === panelKey;
   const [reps, setReps] = useState(String(exercise.reps));
   const [weight, setWeight] = useState("");
+  // Two implements at once (a dumbbell per hand) — the set counts double.
+  const [double, setDouble] = useState(false);
   // Inline correction of an already-logged set. Keyed by set id, so if the set
   // disappears (deleted in another tab) the row just renders in display mode.
   const [editingSetId, setEditingSetId] = useState<string | null>(null);
   const [editWeight, setEditWeight] = useState("");
   const [editReps, setEditReps] = useState("");
+  const [editDouble, setEditDouble] = useState(false);
   const [editAnnouncement, setEditAnnouncement] = useState("");
   const weightInputRef = useRef<HTMLInputElement>(null);
   const editWeightInputRef = useRef<HTMLInputElement>(null);
@@ -116,9 +119,12 @@ export function ExerciseRow({
     if (target) {
       setReps(String(target.reps));
       setWeight(target.weight > 0 ? String(weightFromKg(target.weight, unit)) : "");
+      setDouble(target.double === true);
     } else {
       setReps(String(exercise.reps));
       setWeight("");
+      // double deliberately untouched: with no last-time reference the best
+      // guess for the next set is whatever this session is already doing.
     }
   }, [target, exercise.reps, unit]);
 
@@ -148,10 +154,11 @@ export function ExerciseRow({
     }
   }, [editingSetId]);
 
-  function beginEdit(log: { id: string; reps: number; weight: number }) {
+  function beginEdit(log: { id: string; reps: number; weight: number; double?: boolean }) {
     setEditingSetId(log.id);
     setEditWeight(log.weight > 0 ? String(weightFromKg(log.weight, unit)) : "");
     setEditReps(String(log.reps));
+    setEditDouble(log.double === true);
   }
 
   function cancelEdit() {
@@ -168,9 +175,13 @@ export function ExerciseRow({
     updateSet(session.id, exercise.name, editingSetId, {
       reps: editRepsValue,
       weight: editWeightValue,
+      double: editDouble,
     });
     setEditAnnouncement(
-      `Set ${setNumber} updated: ${formatSet({ reps: editRepsValue, weight: editWeightValue }, unit)}.`,
+      `Set ${setNumber} updated: ${formatSet(
+        { reps: editRepsValue, weight: editWeightValue, double: editDouble },
+        unit,
+      )}.`,
     );
     pencilFocusRef.current = editingSetId;
     setEditingSetId(null);
@@ -181,7 +192,7 @@ export function ExerciseRow({
     addSet(
       { id: dayId, label: dayLabel },
       exercise.name,
-      { reps: repsValue, weight: weightValue },
+      { reps: repsValue, weight: weightValue, double },
       activeDate,
     );
     // Kick off the rest countdown from the same tap that logs the set — this
@@ -322,7 +333,9 @@ export function ExerciseRow({
                       className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-1.5"
                     >
                       {editing ? (
-                        <span className="flex min-w-0 flex-1 items-center gap-2 text-sm tabular-nums text-card-foreground">
+                        // flex-wrap: at 375px the ×2 chip wraps below the
+                        // inputs instead of colliding with the action buttons.
+                        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm tabular-nums text-card-foreground">
                           <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
                             {i + 1}
                           </span>
@@ -367,6 +380,20 @@ export function ExerciseRow({
                               className="w-16 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             />
                           </label>
+                          <button
+                            type="button"
+                            onClick={() => setEditDouble((prev) => !prev)}
+                            aria-pressed={editDouble}
+                            aria-label={`Two dumbbells for set ${i + 1} — counts double`}
+                            className={cn(
+                              "inline-flex h-7 shrink-0 items-center justify-center rounded-md border px-1.5 text-xs font-semibold tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                              editDouble
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-card text-muted-foreground hover:bg-secondary/60",
+                            )}
+                          >
+                            ×2
+                          </button>
                         </span>
                       ) : (
                         <span className="flex items-center gap-2 text-sm tabular-nums text-card-foreground">
@@ -495,6 +522,22 @@ export function ExerciseRow({
                     className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </label>
+                {/* Two implements at once (a dumbbell per hand): the typed
+                    weight stays per implement, volume counts it twice. */}
+                <button
+                  type="button"
+                  onClick={() => setDouble((prev) => !prev)}
+                  aria-pressed={double}
+                  aria-label="Two dumbbells — counts double"
+                  className={cn(
+                    "inline-flex h-[38px] shrink-0 items-center justify-center rounded-lg border px-2.5 text-sm font-semibold tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    double
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:bg-secondary/60",
+                  )}
+                >
+                  ×2
+                </button>
                 <button
                   type="button"
                   onClick={handleAdd}
