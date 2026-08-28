@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CalendarPlus, Search, Trophy } from "lucide-react";
+import { CalendarPlus, CircleCheck, Search, Share2, Trophy, TriangleAlert } from "lucide-react";
 import { useSessions } from "@/components/session-provider";
 import { useUnit } from "@/components/unit-provider";
+import { formatRecordsShareText } from "@/lib/compare";
 import { formatSessionDate, personalRecords } from "@/lib/sessions";
 import { formatWeight } from "@/lib/units";
+import { cn } from "@/lib/utils";
+
+type ShareStatus = { kind: "pending" | "success" | "error"; message: string };
 
 // All-time personal records: per exercise, the heaviest set actually lifted —
 // real weights from the log, no estimates.
@@ -16,6 +20,7 @@ export function PrBoard() {
   // Ephemeral quick filter — deliberately not URL state: it narrows a list
   // the user is looking at, it isn't a view worth bookmarking.
   const [query, setQuery] = useState("");
+  const [shareStatus, setShareStatus] = useState<ShareStatus | null>(null);
 
   // Same hydration gate as SessionHistory: nothing localStorage-derived until
   // mounted.
@@ -51,22 +56,81 @@ export function PrBoard() {
     .map((record, index) => ({ record, rank: index + 1 }))
     .filter(({ record }) => record.exercise.toLowerCase().includes(needle));
 
+  // The share sheet where the platform has one, the clipboard otherwise. The
+  // pending line shows immediately so a slow-opening sheet never looks like a
+  // dead tap; a dismissed sheet (AbortError) is a choice, not a failure.
+  async function shareRecords() {
+    const text = formatRecordsShareText(records, unit);
+    setShareStatus({ kind: "pending", message: "Opening share sheet…" });
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ title: "My Rep Track records", text });
+        setShareStatus({ kind: "success", message: "Shared." });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setShareStatus({ kind: "success", message: "Copied to clipboard." });
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setShareStatus(null);
+        return;
+      }
+      setShareStatus({
+        kind: "error",
+        message: "Couldn't share from this browser — the list below is copyable.",
+      });
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      <label className="relative block w-full sm:max-w-xs">
-        <span className="sr-only">Search exercises</span>
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search exercises…"
-          className="w-full rounded-lg border border-border bg-card py-2 pl-9 pr-3 text-sm text-card-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative block w-full sm:max-w-xs">
+          <span className="sr-only">Search exercises</span>
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search exercises…"
+            className="w-full rounded-lg border border-border bg-card py-2 pl-9 pr-3 text-sm text-card-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => void shareRecords()}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-secondary/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <Share2 className="size-4" aria-hidden="true" />
+          Share my records
+        </button>
+        <p aria-live="polite" className="basis-full sm:basis-auto">
+          {shareStatus ? (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 text-xs font-medium",
+                shareStatus.kind === "success"
+                  ? "text-primary"
+                  : shareStatus.kind === "pending"
+                    ? "text-muted-foreground"
+                    : "text-destructive",
+              )}
+            >
+              {shareStatus.kind === "success" ? (
+                <CircleCheck className="size-3.5" aria-hidden="true" />
+              ) : shareStatus.kind === "pending" ? (
+                <Share2 className="size-3.5" aria-hidden="true" />
+              ) : (
+                <TriangleAlert className="size-3.5" aria-hidden="true" />
+              )}
+              {shareStatus.message}
+            </span>
+          ) : null}
+        </p>
+      </div>
 
       {matches.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
