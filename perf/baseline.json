@@ -1,26 +1,30 @@
 {
   "appVersion": "0.1.0",
-  "recordedAt": "2026-08-06T12:51:54.136Z",
+  "recordedAt": "2026-08-28T10:26:23.736Z",
   "bundle": {
     "routes": {
+      "/compare": {
+        "gzipBytes": 279334,
+        "files": 14
+      },
       "/history": {
-        "gzipBytes": 277964,
+        "gzipBytes": 280414,
         "files": 14
       },
       "/": {
-        "gzipBytes": 286275,
+        "gzipBytes": 288021,
         "files": 14
       },
       "/records": {
-        "gzipBytes": 266766,
-        "files": 13
+        "gzipBytes": 277652,
+        "files": 14
       },
       "/settings": {
-        "gzipBytes": 277062,
+        "gzipBytes": 277871,
         "files": 14
       },
       "/stats": {
-        "gzipBytes": 462238,
+        "gzipBytes": 463039,
         "files": 15
       }
     }

@@ -12,6 +12,11 @@ Notable user-facing changes to Rep Track. Dates are release days on `main`.
   Personal Records rank by total load (2×16 kg beats a single 30 kg). Estimated 1RM stays
   per-dumbbell on purpose. The toggle is also in both edit modes, so past sets can be fixed from
   the History page.
+- **Compare with a friend** (`/compare`) — import a backup they exported from their History page
+  as a read-only profile (never merged into your history; nothing leaves the device) and see
+  records side by side per exercise with the heavier lift marked, plus totals and average volume
+  per session. A **Share my records** button on `/records` sends a text summary through the
+  share sheet (or copies it).
 
 ## 2026-08-06
 
