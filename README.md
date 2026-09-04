@@ -56,9 +56,10 @@ pnpm dev        # http://localhost:3000
 | `pnpm perf:bundle`                  | per-route bundle drift vs the recorded baseline (after `pnpm build`) |
 | `pnpm perf:latency`                 | TTFB percentile smoke against `$PERF_BASE_URL`                       |
 
-CI runs formatting, linting, type-checking, tests, a production dependency audit, and a gitleaks
-secrets scan on every push and pull request. Performance checks live in [perf/](perf/README.md),
-deliberately outside the CI test path.
+CI runs formatting, linting, type-checking and tests on every push and pull request, alongside
+three scanning layers: a production dependency audit, CodeQL static analysis (SAST), and a
+gitleaks secrets scan. Performance checks live in [perf/](perf/README.md), deliberately outside
+the CI test path.
 
 ## Customizing the plan
 

@@ -41,9 +41,22 @@ extractable: pure state transitions live in `lib/`, providers stay thin.
 outside the CI test path: `perf:bundle` compares gzipped per-route first-load
 weight against the versioned `perf/baseline.json` (re-record with `--record`);
 `perf:latency` asserts TTFB percentile budgets from `perf/budgets.json` against
-a deployed preview URL. CI additionally runs `pnpm audit --prod --audit-level
-high` and a gitleaks secrets scan; `pnpm-workspace.yaml` `overrides` keep
-next's transitive `postcss`/`sharp` pins on patched versions.
+a deployed preview URL. CI covers the three scanning layers: `pnpm audit
+--prod --audit-level high` (dependencies) and a gitleaks secrets scan, both in
+`.github/workflows/ci.yml`, plus **CodeQL SAST** in its own
+`.github/workflows/codeql.yml` — kept separate so `security-events: write` is
+scoped to the analyzer rather than granted to the lint/test jobs. It runs on
+every push and PR to `main` plus a weekly cron (query packs gain rules over
+time), with `build-mode: none` and the `security-extended` suite. It analyzes
+two languages via a matrix (a matrix rather than a comma list because
+`build-mode` is single-language-only): `javascript-typescript`, and `actions`
+for the workflow files themselves — pipeline config is code, and that's what
+catches `${{ }}` script injection, over-broad permissions and untrusted action
+refs. No paths are excluded: `public/sw.js` ships to the browser and
+`perf/*.mjs` runs in CI. Findings surface as PR checks and
+Security-tab alerts; making them _block_ a merge is a branch-protection
+setting on the repo, not something the workflow can do. `pnpm-workspace.yaml`
+`overrides` keep next's transitive `postcss`/`sharp` pins on patched
 versions.
 
 **Linting/formatting is [oxc](https://oxc.rs), not ESLint/Prettier.** `oxlint` + `oxfmt` replace them — there is no eslint/prettier config or dependency. oxfmt formats with Prettier-compatible defaults (semicolons, double quotes, 80-col). `.oxlintrc.json` disables `react/react-in-jsx-scope` (the automatic JSX runtime makes it moot) and `import/no-unassigned-import` (side-effect CSS imports). The vendored skill under `.claude/` is excluded from oxfmt via `ignorePatterns`.

@@ -1,0 +1,73 @@
+# Static application security testing. Separate from ci.yml so that
+# `security-events: write` — the permission needed to publish alerts — is
+# scoped to this workflow instead of being granted to the lint/test jobs.
+#
+# This is the SAST layer of the pipeline; the other two live in ci.yml
+# (dependency scanning via `pnpm audit`, secret detection via gitleaks). SAST
+# reads the source at rest and finds code-level flaws — injection, unsafe
+# deserialization, taint from untrusted input — that the other two can't see.
+name: CodeQL
+
+on:
+  # Shift left: every commit and every PR, not the release.
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # CodeQL's query packs keep gaining rules, so re-scan unchanged code weekly
+  # to catch flaws that only a newer ruleset knows about.
+  schedule:
+    - cron: "37 4 * * 1"
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    # Explicit bound rather than leaning on the 360-minute platform default;
+    # a full run of this repo is a few minutes, so a hang fails fast.
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+
+    strategy:
+      # One language failing must not cancel the other's analysis.
+      fail-fast: false
+      matrix:
+        # A matrix, not a comma-separated list: `build-mode` is only available
+        # when a job analyzes a single language.
+        language:
+          - javascript-typescript
+          # The workflow files themselves — pipeline config is code, and this
+          # is what catches script injection via `${{ }}` interpolation,
+          # over-broad permissions and untrusted action references in
+          # ci.yml/codeql.yml. Note the `actions` extractor is still public
+          # preview, so treat rule churn here as expected.
+          - actions
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # No pnpm/node setup and no dependency install: build-mode "none" is the
+      # supported mode for both languages here, and CodeQL extracts straight
+      # from source. No paths are excluded — public/sw.js ships to the browser
+      # and perf/*.mjs runs in CI, so both belong in the scan.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          # Broader than the default "security" suite; both the javascript and
+          # actions packs ship a security-extended suite. Worth the extra
+          # noise on a codebase this size — it's the suite that reasons about
+          # the inline-script and localStorage-parsing surfaces. Narrow to
+          # "security" if triage starts costing more than it catches.
+          queries: security-extended
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
