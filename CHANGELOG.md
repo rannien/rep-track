@@ -7,15 +7,16 @@ Notable user-facing changes to Rep Track. Dates are release days on `main`.
 ### Added
 
 - **A second training plan you can switch to** (Settings → Training plan) — a **barbell strength
-  A/B** block beside the original dumbbell plan: back squat, bench and bent-over row for heavy
+  A/B** block beside the original dumbbell plan: back squat, bench and cable row for heavy
   fours, then two accessories, and a hinge/incline/pull day. Five lifts a day instead of six.
   The choice is remembered on this device and applies _before_ the page paints, so you never see
   the wrong routine on the way to the gym — it even works offline and with JavaScript off.
   Switching never deletes or moves anything you've logged: each plan has its own training days,
   so History, Stats, Records and Compare cover every session whichever plan is active, and a
   non-active plan's exercises still count toward their real muscle groups instead of "Other".
-  Romanian Deadlift, Incline Dumbbell Press and Lat Pulldown appear in both plans on purpose, so
-  those three carry their history, personal records and "last time" reference straight across.
+  Romanian Deadlift, Incline Dumbbell Press, Lat Pulldown and Overhead Triceps Extension appear
+  in both plans on purpose, so those four carry their history, personal records and "last time"
+  reference straight across.
 
 ### Changed
 

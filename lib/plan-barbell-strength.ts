@@ -3,12 +3,13 @@
 // (3-5 -> 4, 5-8 -> 6, 6-8 -> 7), because `reps` is a single integer target
 // and the middle is the honest one to aim at.
 //
-// Romanian Deadlift, Incline Dumbbell Press and Lat Pulldown are shared with
-// lib/plan-dumbbell-hybrid.ts by name on purpose, so this plan inherits their
-// logged history, PRs and "last time" reference from day one. Their
-// muscles/movement/youtube must match there exactly — see the
-// canonical-definition invariant in lib/workouts.test.ts. sets/reps may
-// differ: a different prescription is the whole point of a second plan.
+// Romanian Deadlift, Incline Dumbbell Press, Lat Pulldown and Overhead
+// Triceps Extension are shared with lib/plan-dumbbell-hybrid.ts by name on
+// purpose, so this plan inherits their logged history, PRs and "last time"
+// reference from day one. Their muscles/movement/youtube must match there
+// exactly — see the canonical-definition invariant in lib/workouts.test.ts.
+// sets/reps may differ: a different prescription is the whole point of a
+// second plan.
 
 import type { WorkoutDay } from "./workouts";
 
@@ -36,12 +37,12 @@ export const barbellStrengthDays: WorkoutDay[] = [
         youtube: "https://www.youtube.com/results?search_query=barbell+bench+press+form",
       },
       {
-        name: "Barbell Bent-Over Row",
+        name: "Cable Row",
         sets: 4,
         reps: 4,
         muscles: ["Back", "Biceps"],
         movement: "pull",
-        youtube: "https://www.youtube.com/results?search_query=barbell+bent+over+row+form",
+        youtube: "https://www.youtube.com/results?search_query=cable+row+form",
       },
       {
         name: "Seated Dumbbell Overhead Press",
@@ -52,12 +53,12 @@ export const barbellStrengthDays: WorkoutDay[] = [
         youtube: "https://www.youtube.com/results?search_query=seated+dumbbell+overhead+press+form",
       },
       {
-        name: "Lying Triceps Extensions",
+        name: "Overhead Triceps Extension",
         sets: 3,
         reps: 7,
         muscles: ["Triceps"],
         movement: "push",
-        youtube: "https://www.youtube.com/results?search_query=lying+triceps+extension+form",
+        youtube: "https://www.youtube.com/results?search_query=overhead+triceps+extension+form",
       },
     ],
   },

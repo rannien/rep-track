@@ -3,11 +3,12 @@
 // sessions key on (dayId, dateKey) and there is no migration layer, so
 // renaming one would detach every session logged under it.
 //
-// Three exercises here are shared with lib/plan-barbell-strength.ts on
-// purpose (Romanian Deadlift, Incline Dumbbell Press, Lat Pulldown), so their
-// history, PRs and "last time" reference run continuously across a plan
-// switch. Their muscles/movement/youtube must match there exactly — see the
-// canonical-definition invariant in lib/workouts.test.ts.
+// Four exercises here are shared with lib/plan-barbell-strength.ts on purpose
+// (Romanian Deadlift, Incline Dumbbell Press, Lat Pulldown, Overhead Triceps
+// Extension), so their history, PRs and "last time" reference run
+// continuously across a plan switch. Their muscles/movement/youtube must
+// match there exactly — see the canonical-definition invariant in
+// lib/workouts.test.ts.
 
 import type { WorkoutDay } from "./workouts";
 
