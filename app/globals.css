@@ -134,3 +134,26 @@
     @apply font-sans;
   }
 }
+
+/* The plan page server-renders every plan (the server can't read
+   localStorage) and PLAN_INIT_SCRIPT stamps <html data-plan> before first
+   paint, so only the active plan is ever painted; PlanPanels then drops the
+   inactive one's children on hydration.
+
+   Deliberately unlayered — a rule inside @layer base loses the cascade to any
+   Tailwind utility, so a `flex` or `hidden` class landing on a panel wrapper
+   would reveal both plans. display:none (not [hidden], which an ancestor
+   attribute selector can't drive) also keeps the inactive plan out of the
+   accessibility tree, tab order and find-in-page.
+
+   Adding a plan needs a selector here — the one place plan ids live outside
+   TypeScript. The failure mode is graceful (a blank grid until hydration,
+   then correct), which is why it's acceptable at two plans; past three or
+   four, generate this from the registry or move to per-plan routes. */
+[data-plan-panel] {
+  display: none;
+}
+[data-plan="barbell-strength"] [data-plan-panel="barbell-strength"],
+[data-plan="dumbbell-hybrid"] [data-plan-panel="dumbbell-hybrid"] {
+  display: block;
+}

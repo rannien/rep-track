@@ -41,7 +41,8 @@ function MuscleTooltip({ active, payload }: TooltipContentProps) {
 // (sorting lives in muscleTotals). Single series → single hue; wears chart-3
 // like the other aggregate-totals chart — in single-series charts the hue
 // carries no meaning, so the exercise/muscle sections stay visually one
-// family and the day-identity slots (chart-1/2/5) stay untouched.
+// family and the day-identity slots (DAY_COLOR_SLOTS in lib/workouts.ts)
+// stay untouched.
 export function MuscleTotalsChart({
   data,
   metric,

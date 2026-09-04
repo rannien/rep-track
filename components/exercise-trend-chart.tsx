@@ -43,7 +43,8 @@ import {
 import { type WeightUnit, volumeFromKg, weightFromKg } from "@/lib/units";
 import { useSetSearchParams } from "@/lib/use-set-search-params";
 import { cn } from "@/lib/utils";
-import { workouts } from "@/lib/workouts";
+import type { WorkoutPlan } from "@/lib/plans";
+import type { WorkoutDay } from "@/lib/workouts";
 
 // This chart adds estimated 1RM to volume/reps, so it carries its own metric
 // choice rather than the page-level Volume/Reps toggle — 1RM is the natural
@@ -86,7 +87,17 @@ function ExerciseTooltip({ active, payload }: TooltipContentProps) {
 // exercise (?exercise=…) and the metric (?exmetric=…) live in the URL so
 // reload and back/forward reproduce it; only rendered with hydrated, non-empty
 // session data, so the top-volume default can be computed from it.
-export function ExerciseTrendChart({ sessions }: { sessions: Session[] }) {
+export function ExerciseTrendChart({
+  sessions,
+  plan,
+  knownDays,
+}: {
+  sessions: Session[];
+  /** The active plan — only used for the default selection. */
+  plan: WorkoutPlan;
+  /** Every shipped plan's days, active plan first: what counts as "planned". */
+  knownDays: WorkoutDay[];
+}) {
   const searchParams = useSearchParams();
   const setSearchParams = useSetSearchParams();
   const { unit } = useUnit();
@@ -99,15 +110,17 @@ export function ExerciseTrendChart({ sessions }: { sessions: Session[] }) {
   // Logged exercises no longer in the plan stay selectable under "Other";
   // `selectable` also guards the URL param against unknown names.
   const { unplanned, selectable, topExercise } = useMemo(() => {
-    const planned = new Set(workouts.flatMap((day) => day.exercises.map((e) => e.name)));
+    const planned = new Set(knownDays.flatMap((day) => day.exercises.map((e) => e.name)));
     const totals = exerciseTotals(sessions, "volume");
     const offPlan = totals.map((t) => t.exercise).filter((name) => !planned.has(name));
     return {
       unplanned: offPlan,
       selectable: new Set([...planned, ...offPlan]),
-      topExercise: totals[0]?.exercise ?? workouts[0].exercises[0].name,
+      // Only reached with no logged history, so the default should be the
+      // routine you're actually running — the active plan's opener.
+      topExercise: totals[0]?.exercise ?? plan.days[0].exercises[0].name,
     };
-  }, [sessions]);
+  }, [sessions, knownDays, plan]);
 
   const exerciseParam = searchParams.get("exercise");
   const exercise =
@@ -145,7 +158,7 @@ export function ExerciseTrendChart({ sessions }: { sessions: Session[] }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {workouts.map((day) => (
+              {knownDays.map((day) => (
                 <SelectGroup key={day.id}>
                   <SelectLabel>{day.label}</SelectLabel>
                   {day.exercises.map((ex) => (
@@ -222,7 +235,8 @@ export function ExerciseTrendChart({ sessions }: { sessions: Session[] }) {
               />
               <Tooltip cursor={{ stroke: "var(--border)" }} content={ExerciseTooltip} />
               {/* chart-3 = the exercise-scoped hue, shared with
-                  ExerciseTotalsChart — day charts own chart-1/2/5. */}
+                  ExerciseTotalsChart; the day-identity slots are
+                  DAY_COLOR_SLOTS in lib/workouts.ts. */}
               <Line
                 dataKey={metric}
                 type="linear"
