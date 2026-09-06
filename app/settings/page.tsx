@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageNav } from "@/components/page-nav";
+import { PlanSettings } from "@/components/plan-settings";
 import { RestTimerSettings } from "@/components/rest-timer-settings";
 import { ThemeSettings } from "@/components/theme-settings";
 import { UnitSettings } from "@/components/unit-settings";
@@ -18,6 +19,7 @@ export default function SettingsPage() {
       </header>
 
       <div className="flex flex-col gap-4 sm:gap-6">
+        <PlanSettings />
         <ThemeSettings />
         <UnitSettings />
         <RestTimerSettings />

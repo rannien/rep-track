@@ -44,11 +44,12 @@ function TotalsTooltip({ active, payload }: TooltipContentProps) {
 
 // Lifetime totals per exercise as horizontal bars, sorted by the active
 // metric (the sorting lives in exerciseTotals). Single series → single hue,
-// no legend. The hue is chart-3: the session trend chart above encodes day
-// identity with chart-1/2 (+ chart-5 for legacy days), so exercise-scoped
-// charts wear a slot no day uses — validated CVD-distinct from both day
-// colors in light and dark mode. A third plan day would claim chart-3;
-// move the exercise charts to a later slot if the plan grows.
+// no legend. The hue is chart-3, the one categorical slot that
+// DAY_COLOR_SLOTS in lib/workouts.ts deliberately never hands to a training
+// day — so the exercise-scoped charts cannot collide with day identity, and
+// the hue is validated CVD-distinct from every day color in light and dark
+// mode. Adding a plan widens DAY_COLOR_SLOTS, never this slot: days past the
+// palette fall back to the neutral instead of claiming chart-3.
 export function ExerciseTotalsChart({
   data,
   metric,

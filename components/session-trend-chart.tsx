@@ -21,22 +21,13 @@ import {
 } from "@/components/chart-chrome";
 import { type SessionPoint, type StatsMetric, formatDate, formatSessionDate } from "@/lib/sessions";
 import { type WeightUnit, volumeFromKg } from "@/lib/units";
-import { distinctDays, workouts } from "@/lib/workouts";
+import type { DayLegendEntry } from "@/lib/workouts";
 
-// Chart slots follow the plan's day order so a day keeps its color no matter
-// which sessions are in view; dayIds outside the current plan share the last
-// slot rather than minting new hues. chart-3 is reserved for the
-// exercise-scoped charts (ExerciseTotalsChart, ExerciseTrendChart) — if the
-// plan grows past two days, move those off chart-3 first.
-const dayColors = new Map(workouts.map((day, i) => [day.id, `var(--chart-${i + 1})`]));
-
-function dayColor(dayId: string): string {
-  return dayColors.get(dayId) ?? "var(--chart-5)";
-}
-
-// The plotted points carry their display unit so the tooltip needs no props
-// beyond what recharts injects.
-type DisplayPoint = SessionPoint & { unit: WeightUnit };
+// The plotted points carry their display unit *and* their day color, so the
+// tooltip needs no props beyond what recharts injects — defining
+// TrendTooltip inside the component to close over a color map instead would
+// hand recharts a new component identity on every render.
+type DisplayPoint = SessionPoint & { unit: WeightUnit; color: string };
 
 function TrendTooltip({ active, payload }: TooltipContentProps) {
   const point = payload?.[0]?.payload as DisplayPoint | undefined;
@@ -45,7 +36,7 @@ function TrendTooltip({ active, payload }: TooltipContentProps) {
     <ChartTooltipFrame
       title={
         <>
-          <SeriesSwatch color={dayColor(point.dayId)} />
+          <SeriesSwatch color={point.color} />
           {point.dayLabel} · {formatSessionDate(point.startedAt)}
         </>
       }
@@ -58,21 +49,27 @@ function TrendTooltip({ active, payload }: TooltipContentProps) {
 }
 
 // One bar per logged session, colored by training day. Volumes are converted
-// to the display unit before plotting so the axis and tooltip agree.
+// to the display unit before plotting so the axis and tooltip agree. `days`
+// comes from dayLegend() in the caller and spans every shipped plan, so a
+// session logged under the non-active plan gets its own hue and legend entry;
+// only a day no plan knows reads as neutral.
 export function SessionTrendChart({
   data,
   metric,
   unit,
+  days,
 }: {
   data: SessionPoint[];
   metric: StatsMetric;
   unit: WeightUnit;
+  days: DayLegendEntry[];
 }) {
-  const days = distinctDays(data);
+  const colors = new Map(days.map((day) => [day.id, day.color]));
   const plotted: DisplayPoint[] = data.map((point) => ({
     ...point,
     volume: volumeFromKg(point.volume, unit),
     unit,
+    color: colors.get(point.dayId) ?? "var(--muted-foreground)",
   }));
 
   return (
@@ -81,7 +78,7 @@ export function SessionTrendChart({
         <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">
           {days.map((day) => (
             <li key={day.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <SeriesSwatch color={dayColor(day.id)} />
+              <SeriesSwatch color={day.color} />
               {day.label}
             </li>
           ))}
@@ -116,7 +113,7 @@ export function SessionTrendChart({
               activeBar={{ fillOpacity: 0.85 }}
             >
               {plotted.map((point) => (
-                <Cell key={point.sessionId} fill={dayColor(point.dayId)} />
+                <Cell key={point.sessionId} fill={point.color} />
               ))}
             </Bar>
           </BarChart>

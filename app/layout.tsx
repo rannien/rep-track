@@ -1,11 +1,13 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { PlanProvider } from "@/components/plan-provider";
 import { RestTimerProvider } from "@/components/rest-timer-provider";
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
 import { SessionProvider } from "@/components/session-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { UnitProvider } from "@/components/unit-provider";
+import { DEFAULT_PLAN_ID, PLAN_INIT_SCRIPT } from "@/lib/plans";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -55,24 +57,37 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // suppressHydrationWarning (one level deep) because the init script adds
-    // the "dark" class before hydration, so <html>'s attributes legitimately
-    // differ from the server HTML.
+    // suppressHydrationWarning (one level deep) because the init scripts add
+    // the "dark" class and rewrite data-plan before hydration, so <html>'s
+    // attributes legitimately differ from the server HTML. data-plan is
+    // rendered here rather than left to the script so a no-JS or
+    // blocked-storage visitor still gets one plan revealed, not none.
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} bg-background`}
+      data-plan={DEFAULT_PLAN_ID}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
         {/* First in <body>: parser-blocking, so the stored theme applies
             before first paint — no light flash on a dark preference. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/* Same reasoning for the plan: / renders every plan and CSS reveals
+            one, so this must run before paint or the wrong routine flashes. */}
+        <script dangerouslySetInnerHTML={{ __html: PLAN_INIT_SCRIPT }} />
         <ThemeProvider>
           {/* UnitProvider wraps SessionProvider: the undo toast it renders
               formats weights, so it needs the unit context. */}
           <UnitProvider>
             <SessionProvider>
-              <RestTimerProvider>{children}</RestTimerProvider>
+              <RestTimerProvider>
+                {/* Innermost on purpose: React applies this provider's
+                    hydrated flag in the same re-render that delivers
+                    SessionProvider's loaded sessions, so the inactive plan's
+                    panels — which PlanPanels drops in that very render — never
+                    render against a loaded session list. */}
+                <PlanProvider>{children}</PlanProvider>
+              </RestTimerProvider>
             </SessionProvider>
           </UnitProvider>
         </ThemeProvider>

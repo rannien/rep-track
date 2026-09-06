@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePlan } from "@/components/plan-provider";
 import { useSessions } from "@/components/session-provider";
 import { useUnit } from "@/components/unit-provider";
 import { parseBackup } from "@/lib/backup";
@@ -20,7 +21,6 @@ import {
 import { type PersonalRecord, formatSessionDate, formatSet } from "@/lib/sessions";
 import { type WeightUnit, formatVolume } from "@/lib/units";
 import { cn } from "@/lib/utils";
-import { workouts } from "@/lib/workouts";
 import { CircleCheck, Trophy, TriangleAlert, Upload, Users, X } from "lucide-react";
 
 type Status = { kind: "success" | "error"; message: string };
@@ -43,6 +43,7 @@ function plural(count: number, noun: string): string {
 // written only on import/remove, adopted from other tabs via the storage event.
 export function CompareView() {
   const { hydrated, sessions } = useSessions();
+  const { hydrated: planHydrated, knownDays } = usePlan();
   const { unit } = useUnit();
   const [profile, setProfile] = useState<ComparisonProfile | null>(null);
   const [profileHydrated, setProfileHydrated] = useState(false);
@@ -104,7 +105,7 @@ export function CompareView() {
 
   // Same hydration gate as the other pages: nothing localStorage-derived until
   // both the sessions and the profile have been read.
-  if (!hydrated || !profileHydrated) {
+  if (!hydrated || !profileHydrated || !planHydrated) {
     return (
       <div className="flex flex-col gap-3" aria-hidden="true">
         {[0, 1].map((i) => (
@@ -194,7 +195,9 @@ export function CompareView() {
   }
 
   const totals = compareTotals(sessions, profile.sessions);
-  const records = compareRecords(sessions, profile.sessions, workouts);
+  // knownDays: the active plan's exercises lead the table, the other
+  // shipped plan's follow, and only genuinely unknown names sort last.
+  const records = compareRecords(sessions, profile.sessions, knownDays);
   const totalRows: { label: string; you: string; friend: string; emphasis?: true }[] = [
     {
       label: "Sessions",

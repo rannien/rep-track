@@ -8,9 +8,12 @@ backend, no data leaving your device.
 
 ## Features
 
-- **Fixed weekly plan** — two training days (Day A: upper + legs, Day B: legs + arms) defined in
-  code; each exercise shows target sets × reps, muscles, movement type, and a form-video search
-  link.
+- **Two built-in plans** — a barbell strength A/B (heavy low-rep compounds plus accessories) and
+  the original dumbbell hybrid A/B, both defined in code. Pick the active one under Settings →
+  Training plan; the choice is remembered per device and applies before the page paints. Each
+  exercise shows target sets × reps, muscles, movement type, and a form-video search link.
+  Switching plans moves nothing: History, Stats, Records and Compare read across both plans, so a
+  non-active plan's exercises still count toward their real muscle groups.
 - **Set logging** — weight + reps per set, grouped into one session per training day and calendar
   date. A "last time" reference shows the previous session's sets for each exercise, set by set,
   to drive progressive overload.
@@ -53,22 +56,37 @@ pnpm dev        # http://localhost:3000
 | `pnpm perf:bundle`                  | per-route bundle drift vs the recorded baseline (after `pnpm build`) |
 | `pnpm perf:latency`                 | TTFB percentile smoke against `$PERF_BASE_URL`                       |
 
-CI runs formatting, linting, type-checking, tests, a production dependency audit, and a gitleaks
-secrets scan on every push and pull request. Performance checks live in [perf/](perf/README.md),
-deliberately outside the CI test path.
+CI runs formatting, linting, type-checking and tests on every push and pull request, alongside
+three scanning layers: a production dependency audit, CodeQL static analysis (SAST), and a
+gitleaks secrets scan. Performance checks live in [perf/](perf/README.md), deliberately outside
+the CI test path.
 
 ## Customizing the plan
 
-The workout plan is data, not UI: edit the `workouts` array in
-[lib/workouts.ts](lib/workouts.ts) to change days, exercises, or targets. Exercise names act as
-the join key to logged history, so renaming an exercise starts a fresh history for it (data-
-integrity tests in `lib/workouts.test.ts` guard the invariants).
+The workout plans are data, not UI. Each plan is one module —
+[lib/plan-barbell-strength.ts](lib/plan-barbell-strength.ts),
+[lib/plan-dumbbell-hybrid.ts](lib/plan-dumbbell-hybrid.ts) — holding a `WorkoutDay[]`; edit one to
+change days, exercises, or targets. To add a plan, write a third module, register it in
+[lib/plans.ts](lib/plans.ts), and add its selector pair to the reveal rule at the bottom of
+[app/globals.css](app/globals.css).
+
+Two identifiers are load-bearing:
+
+- **Day ids key sessions.** A session is stored against `(dayId, calendar date)`, so renaming a
+  day id detaches every session already logged under it. Ids must also be unique across plans.
+- **Exercise names are the join key to logged history.** Renaming an exercise starts a fresh
+  history for it; reusing a name across plans deliberately shares one history (which is why
+  Romanian Deadlift, Incline Dumbbell Press and Lat Pulldown appear in both plans), and those
+  shared entries must agree on muscles, movement and video link.
+
+Data-integrity tests in `lib/workouts.test.ts` and `lib/plans.test.ts` guard all of it.
 
 ## Data & privacy
 
 All training data stays in your browser's `localStorage`. There is no server, no sync, and no
 tracking of your training data; the only way it leaves the device is the backup file you export
-yourself. Browsers may evict local storage under pressure — export a backup now and then (the app
+yourself. Device preferences — active plan, theme, units, rest length — live in `localStorage`
+too and are deliberately not part of the backup file, which holds sessions only. Browsers may evict local storage under pressure — export a backup now and then (the app
 reminds you).
 
 ## License

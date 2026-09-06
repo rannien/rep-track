@@ -2,6 +2,38 @@
 
 Notable user-facing changes to Rep Track. Dates are release days on `main`.
 
+## 2026-09-04
+
+### Added
+
+- **A second training plan you can switch to** (Settings → Training plan) — a **barbell strength
+  A/B** block beside the original dumbbell plan: back squat, bench and cable row for heavy
+  fours, then accessory work, and a hinge/incline/pull day.
+  The choice is remembered on this device and applies _before_ the page paints, so you never see
+  the wrong routine on the way to the gym — it even works offline and with JavaScript off.
+  Switching never deletes or moves anything you've logged: each plan has its own training days,
+  so History, Stats, Records and Compare cover every session whichever plan is active, and a
+  non-active plan's exercises still count toward their real muscle groups instead of "Other".
+  Romanian Deadlift, Incline Dumbbell Press, Lat Pulldown and Overhead Triceps Extension appear
+  in both plans on purpose, so those four carry their history, personal records and "last time"
+  reference straight across.
+
+### Changed
+
+- Each day card now leads with the day's name ("Squat · Bench · Row") instead of a Push/Pull
+  tally. The tally only counted two of the four movement patterns, so a squat- or hinge-led day
+  read as having fewer exercises than it has. Every exercise still shows its own movement badge —
+  and with nothing depending on the tally any more, Walking Lunges is correctly a squat pattern
+  and Pec Deck a push.
+- **Romanian Deadlift** now credits Back as well as Legs, and **Incline Dumbbell Press** credits
+  Triceps as well as Chest and Shoulders — an exercise means one set of muscle groups whichever
+  plan it appears in. Nothing you logged changed, but per-muscle chart totals shift accordingly,
+  including for past sessions.
+- On `/stats`, session bars are colored from the active plan: its days take the first two hues
+  and the other plan's days the next two, so a date range spanning a plan switch shows four
+  distinguishable days. A day from neither plan — an imported backup, say — now reads as a
+  neutral grey rather than borrowing a plan colour.
+
 ## 2026-08-19
 
 ### Added

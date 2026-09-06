@@ -9,6 +9,7 @@ import { ExerciseTrendChart } from "@/components/exercise-trend-chart";
 import { MetricToggle } from "@/components/metric-toggle";
 import { MuscleTotalsChart } from "@/components/muscle-totals-chart";
 import { SessionTrendChart } from "@/components/session-trend-chart";
+import { usePlan } from "@/components/plan-provider";
 import { useSessions } from "@/components/session-provider";
 import { useUnit } from "@/components/unit-provider";
 import { muscleTotals } from "@/lib/adherence";
@@ -21,7 +22,7 @@ import {
   totalStats,
 } from "@/lib/sessions";
 import { formatVolume } from "@/lib/units";
-import { workouts } from "@/lib/workouts";
+import { dayLegend } from "@/lib/workouts";
 import { useSetSearchParams } from "@/lib/use-set-search-params";
 import { CalendarCheck, CalendarPlus, Dumbbell, Layers, Repeat } from "lucide-react";
 
@@ -44,6 +45,7 @@ export function SessionStatsSkeleton() {
 
 export function SessionStats() {
   const { hydrated, sessions } = useSessions();
+  const { hydrated: planHydrated, plan, knownDays } = usePlan();
   const { unit } = useUnit();
   // View state (metric + date range) lives in the URL so reload and
   // back/forward reproduce it; anything invalid falls back to the default.
@@ -66,15 +68,24 @@ export function SessionStats() {
   const totals = useMemo(() => totalStats(filtered), [filtered]);
   const trend = useMemo(() => sessionSeries(filtered), [filtered]);
   const perExercise = useMemo(() => exerciseTotals(filtered, metric), [filtered, metric]);
-  const perMuscle = useMemo(() => muscleTotals(filtered, workouts, metric), [filtered, metric]);
+  // knownDays, not the active plan: an exercise from the *other* shipped
+  // plan is still a known exercise, so switching plans must not retire its
+  // logged work into the OTHER_MUSCLE bucket.
+  const perMuscle = useMemo(
+    () => muscleTotals(filtered, knownDays, metric),
+    [filtered, knownDays, metric],
+  );
+  const trendDays = useMemo(() => dayLegend(trend, knownDays), [trend, knownDays]);
   const hasBodyweightSets = useMemo(
     () => filtered.some((s) => s.entries.some((e) => e.sets.some((set) => set.weight === 0))),
     [filtered],
   );
 
   // Same hydration gate as SessionHistory: nothing localStorage-derived until
-  // mounted.
-  if (!hydrated) {
+  // mounted. The plan is a stored preference too, and it drives day colors and
+  // exercise grouping — gating on both keeps the first painted render from
+  // ordering by the default plan and then reshuffling.
+  if (!hydrated || !planHydrated) {
     return <SessionStatsSkeleton />;
   }
 
@@ -150,7 +161,7 @@ export function SessionStats() {
         <h2 className="text-sm font-semibold text-card-foreground">
           {metric === "volume" ? "Volume per session" : "Reps per session"}
         </h2>
-        <SessionTrendChart data={trend} metric={metric} unit={unit} />
+        <SessionTrendChart data={trend} metric={metric} unit={unit} days={trendDays} />
       </section>
 
       <section className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
@@ -173,7 +184,7 @@ export function SessionStats() {
       <section className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
         <h2 className="text-sm font-semibold text-card-foreground">Exercise over time</h2>
         {/* Owns its own metric (adds Est. 1RM), so it doesn't take the page toggle. */}
-        <ExerciseTrendChart sessions={filtered} />
+        <ExerciseTrendChart sessions={filtered} plan={plan} knownDays={knownDays} />
       </section>
     </div>
   );
