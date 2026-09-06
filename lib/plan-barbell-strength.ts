@@ -1,15 +1,14 @@
-// Heavy barbell A/B split: three compounds at the top of each day, then two
+// Heavy barbell A/B split: three compounds at the top of each day, then
 // accessories. Rep targets are the middle of the source routine's ranges
 // (3-5 -> 4, 5-8 -> 6, 6-8 -> 7), because `reps` is a single integer target
 // and the middle is the honest one to aim at.
 //
-// Romanian Deadlift, Incline Dumbbell Press, Lat Pulldown and Overhead
-// Triceps Extension are shared with lib/plan-dumbbell-hybrid.ts by name on
-// purpose, so this plan inherits their logged history, PRs and "last time"
-// reference from day one. Their muscles/movement/youtube must match there
-// exactly — see the canonical-definition invariant in lib/workouts.test.ts.
-// sets/reps may differ: a different prescription is the whole point of a
-// second plan.
+// Romanian Deadlift, Incline Dumbbell Press and Lat Pulldown are shared with
+// lib/plan-dumbbell-hybrid.ts by name on purpose, so this plan inherits their
+// logged history, PRs and "last time" reference from day one. Their
+// muscles/movement/youtube must match there exactly — see the
+// canonical-definition invariant in lib/workouts.test.ts. sets/reps may
+// differ: a different prescription is the whole point of a second plan.
 
 import type { WorkoutDay } from "./workouts";
 
@@ -53,12 +52,20 @@ export const barbellStrengthDays: WorkoutDay[] = [
         youtube: "https://www.youtube.com/results?search_query=seated+dumbbell+overhead+press+form",
       },
       {
-        name: "Overhead Triceps Extension",
+        name: "Cable Push Out",
         sets: 3,
         reps: 7,
         muscles: ["Triceps"],
         movement: "push",
-        youtube: "https://www.youtube.com/results?search_query=overhead+triceps+extension+form",
+        youtube: "https://www.youtube.com/results?search_query=cable+push+out+triceps+form",
+      },
+      {
+        name: "Calf Raises",
+        sets: 3,
+        reps: 10,
+        muscles: ["Legs"],
+        movement: "push",
+        youtube: "https://www.youtube.com/results?search_query=calf+raises+form",
       },
     ],
   },
@@ -107,6 +114,14 @@ export const barbellStrengthDays: WorkoutDay[] = [
         muscles: ["Biceps"],
         movement: "pull",
         youtube: "https://www.youtube.com/results?search_query=barbell+curl+form",
+      },
+      {
+        name: "Lateral Raises",
+        sets: 3,
+        reps: 10,
+        muscles: ["Shoulders"],
+        movement: "push",
+        youtube: "https://www.youtube.com/results?search_query=lateral+raises+form",
       },
     ],
   },

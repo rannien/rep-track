@@ -8,7 +8,7 @@ Notable user-facing changes to Rep Track. Dates are release days on `main`.
 
 - **A second training plan you can switch to** (Settings → Training plan) — a **barbell strength
   A/B** block beside the original dumbbell plan: back squat, bench and cable row for heavy
-  fours, then two accessories, and a hinge/incline/pull day. Five lifts a day instead of six.
+  fours, then accessory work, and a hinge/incline/pull day.
   The choice is remembered on this device and applies _before_ the page paints, so you never see
   the wrong routine on the way to the gym — it even works offline and with JavaScript off.
   Switching never deletes or moves anything you've logged: each plan has its own training days,

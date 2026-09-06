@@ -29,13 +29,13 @@ export const plans: WorkoutPlan[] = [
   {
     id: "barbell-strength",
     name: "Barbell Strength",
-    summary: "Heavy low-rep barbell compounds, then two accessories. Five lifts a day.",
+    summary: "Heavy low-rep barbell compounds, then accessory work.",
     days: barbellStrengthDays,
   },
   {
     id: "dumbbell-hybrid",
     name: "Dumbbell Hybrid",
-    summary: "Moderate-rep dumbbell and machine work. Six lifts a day.",
+    summary: "Moderate-rep dumbbell and machine work.",
     days: dumbbellHybridDays,
   },
 ];
