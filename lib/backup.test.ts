@@ -118,11 +118,34 @@ describe("backupFilename", () => {
 describe("mergeSessions", () => {
   it("unions by id, keeping sessions unique to each side", () => {
     const a = makeSession({ id: "a" });
-    const b = makeSession({ id: "b" });
+    const b = makeSession({ id: "b", dateKey: "2026-07-22" });
 
     const merged = mergeSessions([a], [b]);
 
     expect(merged.map((s) => s.id).toSorted()).toEqual(["a", "b"]);
+  });
+
+  it("coalesces the same workout imported from another device into one session", () => {
+    const local = makeSession({ id: "a" });
+    const imported = makeSession({
+      id: "b",
+      startedAt: "2026-07-20T11:00:00.000Z",
+      entries: [
+        {
+          exercise: "Bench Press",
+          sets: [
+            { id: "set-2", reps: 8, weight: 80 },
+            { id: "set-3", reps: 8, weight: 80 },
+            { id: "set-4", reps: 8, weight: 80 },
+          ],
+        },
+      ],
+    });
+
+    const merged = mergeSessions([local], [imported]);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].entries.flatMap((entry) => entry.sets)).toHaveLength(4);
   });
 
   it("lets the imported copy win an id collision", () => {

@@ -107,7 +107,45 @@ export function parseSessionsArray(parsed: unknown): ParsedSessions {
     if (session) sessions.push(session);
   }
   const dropped = parsed.length - sessions.length;
-  return dropped > 0 ? { kind: "partial", sessions, dropped } : { kind: "ok", sessions };
+  const coalesced = coalesceSessions(sessions);
+  return dropped > 0
+    ? { kind: "partial", sessions: coalesced, dropped }
+    : { kind: "ok", sessions: coalesced };
+}
+
+// One session per (dayId, dateKey): the logging UI looks a session up by that
+// pair, so a split one would hide all but its first part.
+export function coalesceSessions(sessions: Session[]): Session[] {
+  const groups = new Map<string, Session[]>();
+  for (const session of sessions) {
+    const key = JSON.stringify([session.dayId, session.dateKey]);
+    const group = groups.get(key);
+    if (group) group.push(session);
+    else groups.set(key, [session]);
+  }
+  if (groups.size === sessions.length) return sessions;
+  return [...groups.values()].map((group) =>
+    group.length === 1 ? group[0] : mergeSessionParts(group),
+  );
+}
+
+function mergeSessionParts(parts: Session[]): Session {
+  const ordered = parts.toSorted((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
+  const seenSetIds = new Set<string>();
+  const setsByExercise = new Map<string, LoggedSet[]>();
+  for (const part of ordered) {
+    for (const entry of part.entries) {
+      const sets = setsByExercise.get(entry.exercise) ?? [];
+      for (const set of entry.sets) {
+        if (seenSetIds.has(set.id)) continue;
+        seenSetIds.add(set.id);
+        sets.push(set);
+      }
+      if (sets.length > 0) setsByExercise.set(entry.exercise, sets);
+    }
+  }
+  const entries = [...setsByExercise].map(([exercise, sets]) => ({ exercise, sets }));
+  return { ...ordered[0], entries };
 }
 
 // Validate a raw sessions payload. Invalid sessions are dropped individually,

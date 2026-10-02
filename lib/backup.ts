@@ -3,9 +3,14 @@
 // tracking prevention deletes it after seven idle days — so a downloadable
 // JSON copy is the real safety net. Import reuses parseSessionsArray so a
 // restored file passes the exact same trust-boundary validation as a normal
-// load; a merge unions by session id (see mergeSessions).
+// load; a merge unions by session id, then by (dayId, dateKey) (see mergeSessions).
 
-import { type ParsedSessions, type Session, parseSessionsArray } from "./sessions";
+import {
+  type ParsedSessions,
+  type Session,
+  coalesceSessions,
+  parseSessionsArray,
+} from "./sessions";
 
 export const BACKUP_FORMAT = "rep-track-backup";
 export const BACKUP_VERSION = 1;
@@ -62,11 +67,11 @@ export function parseBackup(raw: string): ParsedSessions {
 }
 
 // Union two session lists by id; the imported copy wins an id collision so a
-// restore reflects the backup. Order is irrelevant — every view sorts by
-// startedAt — so existing sessions keep their slots and new ones append.
+// restore reflects the backup. The same workout logged on another device has a
+// different id, so the union is then coalesced to one session per day and date.
 export function mergeSessions(existing: Session[], imported: Session[]): Session[] {
   const byId = new Map<string, Session>();
   for (const session of existing) byId.set(session.id, session);
   for (const session of imported) byId.set(session.id, session);
-  return [...byId.values()];
+  return coalesceSessions([...byId.values()]);
 }

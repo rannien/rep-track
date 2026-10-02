@@ -6,6 +6,7 @@ import {
   backdatedSessionStart,
   bestOneRepMaxForExercise,
   bestOneRepMaxSet,
+  coalesceSessions,
   entryBestOneRepMax,
   entryVolume,
   dateKeyToDate,
@@ -52,6 +53,108 @@ function makeSession(overrides: Partial<Session> = {}): Session {
   };
 }
 
+describe("coalesceSessions", () => {
+  it("returns the same array when every (day, date) is distinct", () => {
+    const sessions = [makeSession({ id: "a" }), makeSession({ id: "b", dateKey: "2026-07-21" })];
+
+    const result = coalesceSessions(sessions);
+
+    expect(result).toBe(sessions);
+  });
+
+  it("takes the merged session's identity from its earliest part, whatever the input order", () => {
+    const late = makeSession({
+      id: "late",
+      dayLabel: "Late label",
+      startedAt: "2026-07-20T12:00:00.000Z",
+      entries: [{ exercise: "Bench Press", sets: [makeSet({ id: "s2" })] }],
+    });
+    const early = makeSession({
+      id: "early",
+      dayLabel: "Early label",
+      startedAt: "2026-07-20T09:00:00.000Z",
+      entries: [{ exercise: "Bench Press", sets: [makeSet({ id: "s1" })] }],
+    });
+
+    const result = coalesceSessions([late, early]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      id: "early",
+      dayLabel: "Early label",
+      startedAt: "2026-07-20T09:00:00.000Z",
+    });
+  });
+
+  it("concatenates one exercise's sets across parts in startedAt order", () => {
+    const late = makeSession({
+      id: "late",
+      startedAt: "2026-07-20T12:00:00.000Z",
+      entries: [{ exercise: "Bench Press", sets: [makeSet({ id: "s3" })] }],
+    });
+    const early = makeSession({
+      id: "early",
+      startedAt: "2026-07-20T09:00:00.000Z",
+      entries: [{ exercise: "Bench Press", sets: [makeSet({ id: "s1" }), makeSet({ id: "s2" })] }],
+    });
+
+    const [merged] = coalesceSessions([late, early]);
+
+    expect(merged.entries).toHaveLength(1);
+    expect(merged.entries[0].sets.map((set) => set.id)).toEqual(["s1", "s2", "s3"]);
+  });
+
+  it("keeps every distinct exercise in order of first appearance", () => {
+    const first = makeSession({
+      id: "first",
+      startedAt: "2026-07-20T09:00:00.000Z",
+      entries: [
+        { exercise: "Bench Press", sets: [makeSet({ id: "s1" })] },
+        { exercise: "Row", sets: [makeSet({ id: "s2" })] },
+      ],
+    });
+    const second = makeSession({
+      id: "second",
+      startedAt: "2026-07-20T11:00:00.000Z",
+      entries: [
+        { exercise: "Squat", sets: [makeSet({ id: "s3" })] },
+        { exercise: "Bench Press", sets: [makeSet({ id: "s4" })] },
+      ],
+    });
+
+    const [merged] = coalesceSessions([first, second]);
+
+    expect(merged.entries.map((entry) => entry.exercise)).toEqual(["Bench Press", "Row", "Squat"]);
+  });
+
+  it("keeps a set id present in both parts only once", () => {
+    const shared = makeSet({ id: "shared" });
+    const a = makeSession({
+      id: "a",
+      startedAt: "2026-07-20T09:00:00.000Z",
+      entries: [{ exercise: "Bench Press", sets: [shared] }],
+    });
+    const b = makeSession({
+      id: "b",
+      startedAt: "2026-07-20T10:00:00.000Z",
+      entries: [{ exercise: "Bench Press", sets: [shared, makeSet({ id: "other" })] }],
+    });
+
+    const [merged] = coalesceSessions([a, b]);
+
+    expect(merged.entries[0].sets.map((set) => set.id)).toEqual(["shared", "other"]);
+  });
+
+  it("keeps sessions of different days on the same date separate", () => {
+    const push = makeSession({ id: "push", dayId: "day-1" });
+    const pull = makeSession({ id: "pull", dayId: "day-2" });
+
+    const result = coalesceSessions([push, pull]);
+
+    expect(result.map((session) => session.id)).toEqual(["push", "pull"]);
+  });
+});
+
 describe("parseSessionsBlob", () => {
   it("treats a missing or empty payload as an empty history", () => {
     expect(parseSessionsBlob(null)).toEqual({ kind: "ok", sessions: [] });
@@ -64,6 +167,26 @@ describe("parseSessionsBlob", () => {
     const result = parseSessionsBlob(JSON.stringify(stored));
 
     expect(result).toEqual({ kind: "ok", sessions: stored });
+  });
+
+  it("folds a session split across two ids into one holding every set", () => {
+    const stored = [
+      makeSession({
+        id: "a",
+        entries: [{ exercise: "Bench Press", sets: [makeSet({ id: "s1" })] }],
+      }),
+      makeSession({
+        id: "b",
+        startedAt: "2026-07-20T11:00:00.000Z",
+        entries: [{ exercise: "Bench Press", sets: [makeSet({ id: "s2" })] }],
+      }),
+    ];
+
+    const result = parseSessionsBlob(JSON.stringify(stored));
+
+    expect(result.kind).toBe("ok");
+    expect(result.sessions).toHaveLength(1);
+    expect(result.sessions[0].entries[0].sets.map((set) => set.id)).toEqual(["s1", "s2"]);
   });
 
   it("strips unknown keys from stored data", () => {
