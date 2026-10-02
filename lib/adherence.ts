@@ -108,3 +108,26 @@ export function muscleTotals(
     return b[sortBy] - a[sortBy] || a.muscle.localeCompare(b.muscle);
   });
 }
+
+function startedLater(a: Session, b: Session): boolean {
+  if (a.dateKey !== b.dateKey) return a.dateKey > b.dateKey;
+  return Date.parse(a.startedAt) > Date.parse(b.startedAt);
+}
+
+// Today's day if trained, else the day after the latest trained (cycling),
+// else the first. Sessions for days outside `days` are ignored.
+export function defaultDayId(
+  days: readonly WorkoutDay[],
+  sessions: readonly Session[],
+  today: string,
+): string | undefined {
+  const dayIds = days.map((day) => day.id);
+  let latest: Session | undefined;
+  for (const session of sessions) {
+    if (!dayIds.includes(session.dayId)) continue;
+    if (!latest || startedLater(session, latest)) latest = session;
+  }
+  if (!latest) return dayIds[0];
+  if (latest.dateKey === today) return latest.dayId;
+  return dayIds[(dayIds.indexOf(latest.dayId) + 1) % dayIds.length];
+}

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { OTHER_MUSCLE, dayProgress, exerciseProgress, muscleTotals } from "./adherence";
+import {
+  OTHER_MUSCLE,
+  dayProgress,
+  defaultDayId,
+  exerciseProgress,
+  muscleTotals,
+} from "./adherence";
 import type { LoggedSet, Session } from "./sessions";
 import type { Exercise, WorkoutDay } from "./workouts";
 
@@ -28,11 +34,11 @@ function makeExercise(overrides: Partial<Exercise> = {}): Exercise {
   };
 }
 
-function makeDay(exercises: Exercise[]): WorkoutDay {
-  return { id: "day-1", label: "Day 1", title: "Upper", focus: "Chest & Back", exercises };
+function makeDay(exercises: Exercise[], id = "day-1"): WorkoutDay {
+  return { id, label: id, title: "Upper", focus: "Chest & Back", exercises };
 }
 
-function makeSession(entries: Session["entries"]): Session {
+function makeSession(entries: Session["entries"], overrides: Partial<Session> = {}): Session {
   return {
     id: "session-1",
     dayId: "day-1",
@@ -40,6 +46,7 @@ function makeSession(entries: Session["entries"]): Session {
     dateKey: "2026-07-20",
     startedAt: "2026-07-20T10:00:00.000Z",
     entries,
+    ...overrides,
   };
 }
 
@@ -225,5 +232,71 @@ describe("muscleTotals", () => {
     const session = makeSession([{ exercise: "Row", sets: [] }]);
 
     expect(muscleTotals([session], days, "volume")).toEqual([]);
+  });
+});
+
+describe("defaultDayId", () => {
+  const today = "2026-07-20";
+  const days = [makeDay([], "a"), makeDay([], "b"), makeDay([], "c")];
+
+  function trained(
+    dayId: string,
+    dateKey: string,
+    startedAt = `${dateKey}T10:00:00.000Z`,
+  ): Session {
+    return makeSession([], { id: `${dayId}-${startedAt}`, dayId, dateKey, startedAt });
+  }
+
+  it("opens on the first day when nothing has been logged", () => {
+    expect(defaultDayId(days, [], today)).toBe("a");
+  });
+
+  it("returns undefined when there are no days", () => {
+    expect(defaultDayId([], [trained("a", today)], today)).toBeUndefined();
+  });
+
+  it("opens on the day trained today even when it is not the first", () => {
+    const sessions = [trained("a", "2026-07-18"), trained("b", today)];
+
+    expect(defaultDayId(days, sessions, today)).toBe("b");
+  });
+
+  it("opens on the day after the most recently trained one", () => {
+    const sessions = [trained("a", "2026-07-18")];
+
+    expect(defaultDayId(days, sessions, today)).toBe("b");
+  });
+
+  it("wraps to the first day after the last day was trained", () => {
+    const sessions = [trained("c", "2026-07-18")];
+
+    expect(defaultDayId(days, sessions, today)).toBe("a");
+  });
+
+  it("picks the most recent session by dateKey regardless of list order", () => {
+    const sessions = [trained("b", "2026-07-19"), trained("a", "2026-07-15")];
+
+    expect(defaultDayId(days, sessions, today)).toBe("c");
+  });
+
+  it("breaks a same-date tie by the later startedAt", () => {
+    const sessions = [
+      trained("a", "2026-07-18", "2026-07-18T08:00:00.000Z"),
+      trained("b", "2026-07-18", "2026-07-18T18:00:00.000Z"),
+    ];
+
+    expect(defaultDayId(days, sessions, today)).toBe("c");
+  });
+
+  it("ignores another plan's session logged today", () => {
+    const sessions = [trained("a", "2026-07-18"), trained("other-plan-day", today)];
+
+    expect(defaultDayId(days, sessions, today)).toBe("b");
+  });
+
+  it("falls back to the first day when only another plan's sessions exist", () => {
+    const sessions = [trained("other-plan-day", "2026-07-18")];
+
+    expect(defaultDayId(days, sessions, today)).toBe("a");
   });
 });

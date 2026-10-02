@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { plans } from "@/lib/plans";
 import { WorkoutCard } from "@/components/workout-card";
+import { DayTabs } from "@/components/day-tabs";
 import { ExercisePanelProvider } from "@/components/exercise-panel-provider";
 import { LoggingDateProvider } from "@/components/logging-date-provider";
 import { PageNav } from "@/components/page-nav";
@@ -50,11 +51,12 @@ export default function Page() {
                       Change plan
                     </Link>
                   </p>
-                  <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-                    {plan.days.map((day) => (
-                      <WorkoutCard key={day.id} day={day} />
-                    ))}
-                  </div>
+                  <DayTabs
+                    tabs={plan.days.map((day) => ({
+                      day,
+                      content: <WorkoutCard day={day} />,
+                    }))}
+                  />
                 </div>
               ),
             }))}
