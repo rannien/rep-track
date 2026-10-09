@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import snapshot from "./catalog-snapshot.json";
 import { DEFAULT_WWWORKOUT_URL, catalogByName, parseCatalog } from "./catalog";
 import { enrichPlans, knownDays, planDefinitions } from "./plans";
-import { type Exercise, dayLegend, distinctDays, muscleLabel } from "./workouts";
+import { type Exercise, dayLegend, distinctDays, muscleLabel, youtubeSearchUrl } from "./workouts";
 
 // The plans are hand-edited data, and parts of them act as identifiers: day
 // ids key sessions, and an exercise's *name* is the join key between a plan
@@ -216,5 +216,19 @@ describe("muscleLabel", () => {
 
   it("returns an empty string unchanged", () => {
     expect(muscleLabel("")).toBe("");
+  });
+});
+
+describe("youtubeSearchUrl", () => {
+  it("searches for the exercise's form, the way WWWorkout links it", () => {
+    expect(youtubeSearchUrl("Deadlift")).toBe(
+      "https://www.youtube.com/results?search_query=Deadlift+form",
+    );
+  });
+
+  it("encodes characters that are significant in a query string", () => {
+    expect(youtubeSearchUrl("Push/Pull & Co #1")).toBe(
+      "https://www.youtube.com/results?search_query=Push%2FPull+%26+Co+%231+form",
+    );
   });
 });

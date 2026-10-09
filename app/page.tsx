@@ -1,11 +1,10 @@
-import Link from "next/link";
 import { getPlans } from "@/lib/catalog-source";
-import { WorkoutCard } from "@/components/workout-card";
-import { DayTabs } from "@/components/day-tabs";
+import { CustomPlanPanel } from "@/components/custom-plan-panel";
 import { ExercisePanelProvider } from "@/components/exercise-panel-provider";
 import { LoggingDateProvider } from "@/components/logging-date-provider";
 import { PageNav } from "@/components/page-nav";
 import { PlanPanels } from "@/components/plan-panels";
+import { PlanView } from "@/components/plan-view";
 import { Dumbbell } from "lucide-react";
 
 export default async function Page() {
@@ -41,27 +40,10 @@ export default async function Page() {
       <LoggingDateProvider>
         <ExercisePanelProvider>
           <PlanPanels
-            panels={plans.map((plan) => ({
-              id: plan.id,
-              content: (
-                <div className="flex flex-col gap-4 sm:gap-6">
-                  <p className="text-xs text-muted-foreground sm:text-sm">
-                    <span className="font-semibold text-foreground">{plan.name}</span> —{" "}
-                    {plan.days.length} training days,{" "}
-                    {plan.days.reduce((sum, day) => sum + day.exercises.length, 0)} exercises.{" "}
-                    <Link href="/settings" className="font-medium text-primary hover:underline">
-                      Change plan
-                    </Link>
-                  </p>
-                  <DayTabs
-                    tabs={plan.days.map((day) => ({
-                      day,
-                      content: <WorkoutCard day={day} />,
-                    }))}
-                  />
-                </div>
-              ),
-            }))}
+            panels={[
+              ...plans.map((plan) => ({ id: plan.id, content: <PlanView plan={plan} /> })),
+              { id: "custom" as const, content: <CustomPlanPanel /> },
+            ]}
           />
         </ExercisePanelProvider>
       </LoggingDateProvider>

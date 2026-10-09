@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, ChartColumn, History, Settings, Trophy, Users } from "lucide-react";
 
-type PageId = "plan" | "history" | "stats" | "records" | "compare" | "settings";
+// "planner" has no pill of its own: it is reached from Settings and the plan page.
+type PageId = "plan" | "history" | "stats" | "records" | "compare" | "settings" | "planner";
 
 const pillClass =
   "inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:text-sm";

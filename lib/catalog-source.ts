@@ -1,3 +1,4 @@
+import { cache } from "react";
 import snapshot from "./catalog-snapshot.json";
 import {
   DEFAULT_WWWORKOUT_URL,
@@ -6,7 +7,7 @@ import {
   parseCatalog,
   type CatalogExercise,
 } from "./catalog";
-import { enrichPlans, planDefinitions, type WorkoutPlan } from "./plans";
+import { type BuiltInWorkoutPlan, enrichPlans, planDefinitions } from "./plans";
 
 const CATALOG_REVALIDATE_SECONDS = 3600;
 const CATALOG_TIMEOUT_MS = 5000;
@@ -45,7 +46,8 @@ export async function readJsonWithLimit(response: Response, maxBytes: number): P
   return JSON.parse(await new Response(limited).text());
 }
 
-async function fetchLiveCatalog(): Promise<Map<string, CatalogExercise>> {
+// cache(): the layout and a page both read the catalogue in one render; fetch once.
+const fetchLiveCatalog = cache(async (): Promise<Map<string, CatalogExercise>> => {
   const target = CATALOG_URL.toString();
   const startedAt = Date.now();
   try {
@@ -76,10 +78,20 @@ async function fetchLiveCatalog(): Promise<Map<string, CatalogExercise>> {
     console.warn("catalog fetch failed", { target, reason, durationMs: Date.now() - startedAt });
     return new Map();
   }
-}
+});
 
 // Plans enriched from the live catalogue, falling back per exercise to the
 // committed snapshot, so an unreachable wwworkout never breaks a build or page.
-export async function getPlans(): Promise<WorkoutPlan[]> {
+export async function getPlans(): Promise<BuiltInWorkoutPlan[]> {
   return enrichPlans(planDefinitions, [await fetchLiveCatalog(), snapshotCatalog]);
+}
+
+// The whole catalogue for the client (planner picker, custom-plan enrichment): live
+// entries, plus snapshot entries for names the live catalogue lacks.
+export async function getCatalog(): Promise<CatalogExercise[]> {
+  const live = await fetchLiveCatalog();
+  return [
+    ...live.values(),
+    ...[...snapshotCatalog.values()].filter((exercise) => !live.has(exercise.name)),
+  ];
 }

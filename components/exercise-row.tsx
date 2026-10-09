@@ -219,7 +219,7 @@ export function ExerciseRow({
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h3 className="font-semibold text-card-foreground">{exercise.name}</h3>
-            <MovementBadge movement={exercise.movement} />
+            {exercise.movement ? <MovementBadge movement={exercise.movement} /> : null}
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             {exercise.muscles.map((muscle) => (
@@ -287,15 +287,17 @@ export function ExerciseRow({
           >
             <Play className="size-4 fill-current" aria-hidden="true" />
           </a>
-          <a
-            href={exercise.detailUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Open ${exercise.name} in WWWorkout (opens in a new tab)`}
-            className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <BookOpen className="size-4" aria-hidden="true" />
-          </a>
+          {exercise.detailUrl ? (
+            <a
+              href={exercise.detailUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open ${exercise.name} in WWWorkout (opens in a new tab)`}
+              className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <BookOpen className="size-4" aria-hidden="true" />
+            </a>
+          ) : null}
         </div>
       </div>
 

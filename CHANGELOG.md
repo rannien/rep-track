@@ -2,6 +2,19 @@
 
 Notable user-facing changes to Rep Track. Dates are release days on `main`.
 
+## Unreleased
+
+### Added
+
+- **Build your own plans** in the new **Planner** (Settings → "Create or edit your own plans", or
+  "Build your own" on the plan page). Start from scratch or from a copy of a built-in plan, add up
+  to seven training days, and pick exercises from the WWWorkout catalogue — search it by name and
+  filter by muscle or movement — then set sets × reps and reorder. Changes save as you type. A
+  finished plan appears in Settings next to the built-in ones and logs exactly like them; up to
+  ten plans per device.
+- **Backups now include your plans** (backup format v2). Importing merges them — the newer copy
+  of a plan wins — and older backups still import as before.
+
 ## 2026-09-04
 
 ### Added

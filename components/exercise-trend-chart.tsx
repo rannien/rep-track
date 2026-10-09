@@ -95,7 +95,7 @@ export function ExerciseTrendChart({
   sessions: Session[];
   /** The active plan — only used for the default selection. */
   plan: WorkoutPlan;
-  /** Every shipped plan's days, active plan first: what counts as "planned". */
+  /** Every plan's days, active plan first: what counts as "planned". */
   knownDays: WorkoutDay[];
 }) {
   const searchParams = useSearchParams();
@@ -109,16 +109,22 @@ export function ExerciseTrendChart({
 
   // Logged exercises no longer in the plan stay selectable under "Other";
   // `selectable` also guards the URL param against unknown names.
-  const { unplanned, selectable, topExercise } = useMemo(() => {
+  const { pickerDays, unplanned, selectable, topExercise } = useMemo(() => {
     const planned = new Set(knownDays.flatMap((day) => day.exercises.map((e) => e.name)));
+    // Up to ten custom plans can be known; list only the active plan's days and days with history.
+    const listedDayIds = new Set([
+      ...plan.days.map((day) => day.id),
+      ...sessions.map((session) => session.dayId),
+    ]);
     const totals = exerciseTotals(sessions, "volume");
     const offPlan = totals.map((t) => t.exercise).filter((name) => !planned.has(name));
     return {
+      pickerDays: knownDays.filter((day) => listedDayIds.has(day.id)),
       unplanned: offPlan,
       selectable: new Set([...planned, ...offPlan]),
       // Only reached with no logged history, so the default should be the
       // routine you're actually running — the active plan's opener.
-      topExercise: totals[0]?.exercise ?? plan.days[0].exercises[0].name,
+      topExercise: totals[0]?.exercise ?? plan.days[0]?.exercises[0]?.name ?? "",
     };
   }, [sessions, knownDays, plan]);
 
@@ -158,7 +164,7 @@ export function ExerciseTrendChart({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {knownDays.map((day) => (
+              {pickerDays.map((day) => (
                 <SelectGroup key={day.id}>
                   <SelectLabel>{day.label}</SelectLabel>
                   {day.exercises.map((ex) => (

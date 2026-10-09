@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { usePlan } from "@/components/plan-provider";
-import { planDefinitions } from "@/lib/plans";
+import { isUsable } from "@/lib/custom-plans";
 import { cn } from "@/lib/utils";
 import { ClipboardList } from "lucide-react";
 
@@ -13,7 +14,7 @@ import { ClipboardList } from "lucide-react";
 // option needs a name, a sentence and a day/exercise count, which won't fit a
 // pill at 375 px.
 export function PlanSettings() {
-  const { planId, setPlanId } = usePlan();
+  const { planId, setPlanId, plans } = usePlan();
 
   return (
     <section className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
@@ -34,13 +35,15 @@ export function PlanSettings() {
         {/* Margin, not fieldset gap: a legend is not a flex item, so gap
             between it and the options never applies. */}
         <div className="mt-2 flex flex-col gap-2">
-          {planDefinitions.map((plan) => {
+          {plans.map((plan) => {
             const active = planId === plan.id;
+            const usable = isUsable(plan);
             const exercises = plan.days.reduce((sum, day) => sum + day.exercises.length, 0);
             return (
               <label
                 key={plan.id}
                 className={cn(
+                  !usable && "cursor-not-allowed opacity-60",
                   // Two-column grid so the dot forms a leading column and the
                   // sub-lines align under the name structurally — no
                   // hand-computed indent to drift when the dot size changes.
@@ -57,6 +60,7 @@ export function PlanSettings() {
                   name="workout-plan"
                   className="sr-only"
                   checked={active}
+                  disabled={!usable && !active}
                   onChange={() => setPlanId(plan.id)}
                 />
                 <span
@@ -71,8 +75,9 @@ export function PlanSettings() {
                   {plan.summary}
                 </span>
                 <span className="col-start-2 text-[11px] tabular-nums text-muted-foreground">
-                  {plan.days.length} days · {exercises} exercises ·{" "}
-                  {plan.days.map((day) => day.label).join(", ")}
+                  {usable
+                    ? `${plan.days.length} days · ${exercises} exercises · ${plan.days.map((day) => day.label).join(", ")}`
+                    : "Every day needs an exercise before this plan can be used."}
                 </span>
               </label>
             );
@@ -85,6 +90,9 @@ export function PlanSettings() {
         training days, so past sessions stay under the day they were logged on — and History, Stats,
         Records and Compare always cover every session, whichever plan is active.
       </p>
+      <Link href="/planner" className="w-fit text-xs font-medium text-primary hover:underline">
+        Create or edit your own plans
+      </Link>
     </section>
   );
 }

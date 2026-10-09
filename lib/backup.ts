@@ -5,6 +5,7 @@
 // restored file passes the exact same trust-boundary validation as a normal
 // load; a merge unions by session id, then by (dayId, dateKey) (see mergeSessions).
 
+import { type CustomPlan, type ParsedCustomPlans, parseCustomPlansArray } from "./custom-plans";
 import {
   type ParsedSessions,
   type Session,
@@ -13,7 +14,8 @@ import {
 } from "./sessions";
 
 export const BACKUP_FORMAT = "rep-track-backup";
-export const BACKUP_VERSION = 1;
+// v2 adds the optional `plans` (custom plans); v1 files still import.
+export const BACKUP_VERSION = 2;
 
 // The envelope written to disk. Versioned so a future format change can be
 // detected; `exportedAt` records when the copy was taken.
@@ -22,17 +24,23 @@ export type BackupEnvelope = {
   version: number;
   exportedAt: string; // ISO timestamp
   sessions: Session[];
+  plans?: CustomPlan[];
 };
 
 // Pretty-printed so a curious user can read the file; the caller supplies the
 // timestamp (keeps this pure and testable, and follows "no Date.now() buried
 // in logic").
-export function serializeBackup(sessions: Session[], exportedAt: string): string {
+export function serializeBackup(
+  sessions: Session[],
+  exportedAt: string,
+  plans: CustomPlan[] = [],
+): string {
   const envelope: BackupEnvelope = {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exportedAt,
     sessions,
+    ...(plans.length > 0 ? { plans } : {}),
   };
   return JSON.stringify(envelope, null, 2);
 }
@@ -56,14 +64,30 @@ function hasSessionsArray(value: unknown): value is { sessions: unknown[] } {
 // or a bare sessions array (e.g. a raw localStorage dump), then runs the array
 // through the shared session validator — invalid sessions drop individually.
 export function parseBackup(raw: string): ParsedSessions {
+  return parseBackupFile(raw).sessions;
+}
+
+export type ParsedBackup = {
+  sessions: ParsedSessions;
+  /** null when the file carries no plans (a v1 file, or a bare sessions array). */
+  plans: ParsedCustomPlans | null;
+};
+
+// The full restore: sessions as parseBackup, plus custom plans through the same
+// validator as localStorage (lib/custom-plans.ts).
+export function parseBackupFile(raw: string): ParsedBackup {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return { kind: "corrupt", sessions: [] };
+    return { sessions: { kind: "corrupt", sessions: [] }, plans: null };
   }
   const candidate = hasSessionsArray(parsed) ? parsed.sessions : parsed;
-  return parseSessionsArray(candidate);
+  const plans =
+    typeof parsed === "object" && parsed !== null && Object.hasOwn(parsed, "plans")
+      ? parseCustomPlansArray(Object.getOwnPropertyDescriptor(parsed, "plans")?.value)
+      : null;
+  return { sessions: parseSessionsArray(candidate), plans };
 }
 
 // Union two session lists by id; the imported copy wins an id collision so a

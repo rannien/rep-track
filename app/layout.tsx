@@ -7,7 +7,7 @@ import { ServiceWorkerRegistrar } from "@/components/service-worker";
 import { SessionProvider } from "@/components/session-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { UnitProvider } from "@/components/unit-provider";
-import { getPlans } from "@/lib/catalog-source";
+import { getCatalog, getPlans } from "@/lib/catalog-source";
 import { DEFAULT_PLAN_ID, PLAN_INIT_SCRIPT } from "@/lib/plans";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
@@ -57,7 +57,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const plans = await getPlans();
+  const [plans, catalog] = await Promise.all([getPlans(), getCatalog()]);
 
   return (
     // suppressHydrationWarning (one level deep) because the init scripts add
@@ -89,7 +89,9 @@ export default async function RootLayout({
                     SessionProvider's loaded sessions, so the inactive plan's
                     panels — which PlanPanels drops in that very render — never
                     render against a loaded session list. */}
-                <PlanProvider plans={plans}>{children}</PlanProvider>
+                <PlanProvider plans={plans} catalog={catalog}>
+                  {children}
+                </PlanProvider>
               </RestTimerProvider>
             </SessionProvider>
           </UnitProvider>

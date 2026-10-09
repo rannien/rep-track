@@ -13,21 +13,30 @@
 import { barbellStrengthDays } from "./plan-barbell-strength";
 import { dumbbellHybridDays } from "./plan-dumbbell-hybrid";
 import type { CatalogExercise } from "./catalog";
-import type { Exercise, PlanDay, PlanExercise, WorkoutDay } from "./workouts";
+import { CUSTOM_ID_PATTERN, type CustomPlan, type CustomPlanId, isCustomId } from "./custom-plans";
+import {
+  type Exercise,
+  type PlanDay,
+  type PlanExercise,
+  type WorkoutDay,
+  youtubeSearchUrl,
+} from "./workouts";
 
 export const PLAN_KEY = "rep-track-plan";
 
-export type PlanId = "barbell-strength" | "dumbbell-hybrid";
+export type BuiltInPlanId = "barbell-strength" | "dumbbell-hybrid";
+export type PlanId = BuiltInPlanId | CustomPlanId;
 
 export type PlanDefinition = {
-  id: PlanId;
+  id: BuiltInPlanId;
   name: string;
   summary: string;
   days: PlanDay[];
 };
 
 // A plan with every exercise enriched from the catalogue (see enrichPlans).
-export type WorkoutPlan = Omit<PlanDefinition, "days"> & { days: WorkoutDay[] };
+export type WorkoutPlan = Omit<PlanDefinition, "id" | "days"> & { id: PlanId; days: WorkoutDay[] };
+export type BuiltInWorkoutPlan = WorkoutPlan & { id: BuiltInPlanId };
 
 export const planDefinitions: PlanDefinition[] = [
   {
@@ -47,16 +56,25 @@ export const planDefinitions: PlanDefinition[] = [
 // The plan a device with no stored preference gets. Deliberately the barbell
 // plan: it is the routine currently being run, and the dumbbell plan is one
 // tap away in /settings.
-export const DEFAULT_PLAN_ID: PlanId = "barbell-strength";
+export const DEFAULT_PLAN_ID: BuiltInPlanId = "barbell-strength";
 
-// localStorage is a trust boundary (see lib/sessions.ts): only an id this
-// build actually ships is accepted; anything else yields null and the caller
-// keeps DEFAULT_PLAN_ID. Deliberately a lookup over the array rather than an
-// object keyed by the untrusted string — registry["__proto__"] returning
-// Object.prototype is exactly the class of bug parseSessionsBlob guards
-// against — and it returns the registry's own literal, so no cast is needed.
+// Syntactic, like PLAN_INIT_SCRIPT (resolvePlanId checks existence). An array lookup,
+// never an object indexed by the raw string, so "__proto__" cannot resolve.
 export function parseStoredPlanId(raw: string | null): PlanId | null {
-  return planDefinitions.find((plan) => plan.id === raw)?.id ?? null;
+  const builtIn = planDefinitions.find((plan) => plan.id === raw)?.id;
+  if (builtIn !== undefined) return builtIn;
+  return isCustomId(raw) ? raw : null;
+}
+
+export function resolvePlanId(
+  parsed: PlanId | null,
+  customPlans: Pick<CustomPlan, "id">[],
+): PlanId {
+  if (parsed === null) return DEFAULT_PLAN_ID;
+  if (isCustomId(parsed) && !customPlans.some((plan) => plan.id === parsed)) {
+    return DEFAULT_PLAN_ID;
+  }
+  return parsed;
 }
 
 export function planById(id: PlanId, plans: WorkoutPlan[]): WorkoutPlan {
@@ -67,14 +85,24 @@ export function planById(id: PlanId, plans: WorkoutPlan[]): WorkoutPlan {
   return plan;
 }
 
-// Every shipped plan's days, the active plan's first. Day ids are globally
-// unique across plans (asserted in lib/plans.test.ts), so this never contains
-// a duplicate — two plans sharing a day id would merge their session
-// histories, since a session keys on (dayId, dateKey) alone.
+// Every plan's days, the active plan's first; day ids are unique across plans. A repeated
+// label on a non-active day is qualified with its plan name for the legend and picker.
 export function knownDays(activeId: PlanId, plans: WorkoutPlan[]): WorkoutDay[] {
+  const labelCounts = new Map<string, number>();
+  for (const day of plans.flatMap((plan) => plan.days)) {
+    labelCounts.set(day.label, (labelCounts.get(day.label) ?? 0) + 1);
+  }
   return [
     ...planById(activeId, plans).days,
-    ...plans.filter((plan) => plan.id !== activeId).flatMap((plan) => plan.days),
+    ...plans
+      .filter((plan) => plan.id !== activeId)
+      .flatMap((plan) =>
+        plan.days.map((day) =>
+          (labelCounts.get(day.label) ?? 0) > 1
+            ? { ...day, label: `${plan.name} · ${day.label}` }
+            : day,
+        ),
+      ),
   ];
 }
 
@@ -84,22 +112,28 @@ export function knownDays(activeId: PlanId, plans: WorkoutPlan[]): WorkoutDay[] 
 // deliberate pre-paint exception after THEME_INIT_SCRIPT; justified on the
 // same grounds, that it decides primary content on first paint.
 //
-// Unlike the theme script this only *overwrites* data-plan when the stored
-// value is a shipped id, so an absent key, garbage, or blocked storage all
-// leave the server-rendered DEFAULT_PLAN_ID in place. Must stay semantically
-// identical to parseStoredPlanId(raw) ?? DEFAULT_PLAN_ID — a test executes
-// this string to enforce it. indexOf over an array literal keeps the
-// prototype hazard out by construction, and the id list is interpolated from
-// the registry so it cannot drift.
+// Must stay semantically identical to parseStoredPlanId(raw) ?? DEFAULT_PLAN_ID; a test
+// executes this string. Anything else leaves the server-rendered default in place.
 export const PLAN_INIT_SCRIPT = `(function () {
   try {
     var ids = ${JSON.stringify(planDefinitions.map((plan) => plan.id))};
+    var custom = new RegExp(${JSON.stringify(CUSTOM_ID_PATTERN.source)});
     var stored = localStorage.getItem(${JSON.stringify(PLAN_KEY)});
-    if (ids.indexOf(stored) !== -1) {
+    if (ids.indexOf(stored) !== -1 || (typeof stored === "string" && custom.test(stored))) {
       document.documentElement.setAttribute("data-plan", stored);
     }
   } catch (error) {}
 })();`;
+
+function fromCatalogEntry(exercise: PlanExercise, entry: CatalogExercise): Exercise {
+  return {
+    ...exercise,
+    muscles: entry.muscleGroups,
+    movement: entry.movementPattern,
+    youtube: entry.videoUrl,
+    detailUrl: entry.detailUrl,
+  };
+}
 
 function enrichExercise(
   exercise: PlanExercise,
@@ -110,13 +144,7 @@ function enrichExercise(
     .find((found) => found !== undefined);
   if (entry === undefined)
     throw new Error(`No catalogue entry for plan exercise "${exercise.name}"`);
-  return {
-    ...exercise,
-    muscles: entry.muscleGroups,
-    movement: entry.movementPattern,
-    youtube: entry.videoUrl,
-    detailUrl: entry.detailUrl,
-  };
+  return fromCatalogEntry(exercise, entry);
 }
 
 // Earlier catalogues win (live, then snapshot); lib/plans.test.ts keeps every plan
@@ -124,12 +152,42 @@ function enrichExercise(
 export function enrichPlans(
   definitions: PlanDefinition[],
   catalogs: ReadonlyMap<string, CatalogExercise>[],
-): WorkoutPlan[] {
+): BuiltInWorkoutPlan[] {
   return definitions.map((plan) => ({
     ...plan,
     days: plan.days.map((day) => ({
       ...day,
       exercises: day.exercises.map((exercise) => enrichExercise(exercise, catalogs)),
+    })),
+  }));
+}
+
+// Unlike enrichExercise this never throws: a user's plan may name an exercise a later
+// catalogue dropped, which then keeps its targets but loses muscles, movement and links.
+function enrichCustomExercise(
+  exercise: PlanExercise,
+  catalog: ReadonlyMap<string, CatalogExercise>,
+): Exercise {
+  const entry = catalog.get(exercise.name);
+  if (entry === undefined) {
+    return { ...exercise, muscles: [], youtube: youtubeSearchUrl(exercise.name) };
+  }
+  return fromCatalogEntry(exercise, entry);
+}
+
+export function enrichCustomPlans(
+  customs: CustomPlan[],
+  catalog: ReadonlyMap<string, CatalogExercise>,
+): WorkoutPlan[] {
+  return customs.map((plan) => ({
+    id: plan.id,
+    name: plan.name.trim() || "Untitled plan",
+    summary: "Your own plan, built in the planner.",
+    days: plan.days.map((day, index) => ({
+      ...day,
+      label: day.label.trim() || `Day ${index + 1}`,
+      title: day.title.trim() || "Untitled day",
+      exercises: day.exercises.map((exercise) => enrichCustomExercise(exercise, catalog)),
     })),
   }));
 }
