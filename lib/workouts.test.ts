@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { knownDays, plans } from "./plans";
-import { dayLegend, distinctDays } from "./workouts";
+import snapshot from "./catalog-snapshot.json";
+import { DEFAULT_WWWORKOUT_URL, catalogByName, parseCatalog } from "./catalog";
+import { enrichPlans, knownDays, planDefinitions } from "./plans";
+import { type Exercise, dayLegend, distinctDays, muscleLabel } from "./workouts";
 
 // The plans are hand-edited data, and parts of them act as identifiers: day
 // ids key sessions, and an exercise's *name* is the join key between a plan
@@ -9,10 +11,16 @@ import { dayLegend, distinctDays } from "./workouts";
 // system can't check any of them. Day-id and day-label uniqueness are
 // asserted across all plans in plans.test.ts, where the registry lives.
 
+const plans = enrichPlans(planDefinitions, [
+  catalogByName(parseCatalog(snapshot, new URL(DEFAULT_WWWORKOUT_URL).origin)),
+]);
 const allDays = plans.flatMap((plan) => plan.days.map((day) => ({ plan: plan.id, day })));
 const allExercises = allDays.flatMap(({ plan, day }) =>
   day.exercises.map((exercise) => ({ plan, day: day.id, exercise })),
 );
+
+const enrichment = ({ name, muscles, movement, youtube, detailUrl }: Exercise) =>
+  [name, { muscles, movement, youtube, detailUrl }] as const;
 
 describe("workout plan data integrity", () => {
   it("gives every day an id, label, title, and focus", () => {
@@ -53,31 +61,12 @@ describe("workout plan data integrity", () => {
     }
   });
 
-  it("gives an exercise name one canonical definition across plans", () => {
-    // muscleTotals buckets by exercise name over all history, last write
-    // winning, so a name meaning different muscles in different plans would
-    // let registry order decide what it trains. sets/reps are deliberately
-    // not compared: a different prescription is the point of a second plan.
-    const byName = new Map<
-      string,
-      { plan: string; muscles: string[]; movement: string; youtube: string }
-    >();
-    for (const { plan, exercise } of allExercises) {
-      const seen = byName.get(exercise.name);
-      if (seen === undefined) {
-        byName.set(exercise.name, {
-          plan,
-          muscles: exercise.muscles,
-          movement: exercise.movement,
-          youtube: exercise.youtube,
-        });
-        continue;
-      }
-      const where = `${exercise.name} (${seen.plan} vs ${plan})`;
-      expect(exercise.muscles.toSorted(), where).toEqual(seen.muscles.toSorted());
-      expect(exercise.movement, where).toBe(seen.movement);
-      expect(exercise.youtube, where).toBe(seen.youtube);
-    }
+  it("enriches an exercise name identically in every plan", () => {
+    const byName = new Map(allExercises.map(({ exercise }) => enrichment(exercise)));
+
+    expect(allExercises.map(({ exercise }) => enrichment(exercise))).toEqual(
+      allExercises.map(({ exercise }) => [exercise.name, byName.get(exercise.name)]),
+    );
   });
 
   it("keeps colons out of exercise names", () => {
@@ -159,7 +148,7 @@ describe("dayLegend", () => {
     // The claim session-trend-chart's comment makes: a session logged under
     // the non-active plan is a peer series, not an unknown day.
     for (const plan of plans) {
-      const days = knownDays(plan.id);
+      const days = knownDays(plan.id, plans);
       const colors = dayLegend(
         days.map((day) => ({ dayId: day.id, dayLabel: day.label })),
         days,
@@ -209,5 +198,23 @@ describe("dayLegend", () => {
 
   it("returns no entries for no items", () => {
     expect(dayLegend([], known)).toEqual([]);
+  });
+});
+
+describe("muscleLabel", () => {
+  it("capitalizes a single lowercase word", () => {
+    expect(muscleLabel("lats")).toBe("Lats");
+  });
+
+  it("capitalizes every word of a multi-word muscle", () => {
+    expect(muscleLabel("upper back")).toBe("Upper Back");
+  });
+
+  it("leaves an already title-cased label unchanged", () => {
+    expect(muscleLabel("Other")).toBe("Other");
+  });
+
+  it("returns an empty string unchanged", () => {
+    expect(muscleLabel("")).toBe("");
   });
 });

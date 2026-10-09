@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { muscleLabel } from "@/lib/workouts";
 import {
   ChartTooltipFrame,
   ChartTooltipRow,
@@ -29,7 +30,7 @@ function MuscleTooltip({ active, payload }: TooltipContentProps) {
   const totals = payload?.[0]?.payload as DisplayTotals | undefined;
   if (!active || !totals) return null;
   return (
-    <ChartTooltipFrame title={totals.muscle}>
+    <ChartTooltipFrame title={muscleLabel(totals.muscle)}>
       <ChartTooltipRow label="Sets" value={formatCount(totals.sets)} />
       <ChartTooltipRow label="Reps" value={formatCount(totals.reps)} />
       <ChartTooltipRow label="Volume" value={formatVolume(totals.volume, totals.unit)} />
@@ -77,6 +78,7 @@ export function MuscleTotalsChart({
           <YAxis
             type="category"
             dataKey="muscle"
+            tickFormatter={muscleLabel}
             width="auto"
             tickLine={false}
             axisLine={false}

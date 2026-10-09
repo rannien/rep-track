@@ -33,6 +33,7 @@ import {
   Trophy,
   TrendingUp,
   X,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -281,10 +282,19 @@ export function ExerciseRow({
             href={exercise.youtube}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Watch ${exercise.name} tutorial on YouTube`}
-            className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+            aria-label={`Watch ${exercise.name} tutorial on YouTube (opens in a new tab)`}
+            className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <Play className="size-4 fill-current" aria-hidden="true" />
+          </a>
+          <a
+            href={exercise.detailUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open ${exercise.name} in WWWorkout (opens in a new tab)`}
+            className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <BookOpen className="size-4" aria-hidden="true" />
           </a>
         </div>
       </div>

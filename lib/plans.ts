@@ -12,20 +12,24 @@
 
 import { barbellStrengthDays } from "./plan-barbell-strength";
 import { dumbbellHybridDays } from "./plan-dumbbell-hybrid";
-import type { WorkoutDay } from "./workouts";
+import type { CatalogExercise } from "./catalog";
+import type { Exercise, PlanDay, PlanExercise, WorkoutDay } from "./workouts";
 
 export const PLAN_KEY = "rep-track-plan";
 
 export type PlanId = "barbell-strength" | "dumbbell-hybrid";
 
-export type WorkoutPlan = {
+export type PlanDefinition = {
   id: PlanId;
   name: string;
   summary: string;
-  days: WorkoutDay[];
+  days: PlanDay[];
 };
 
-export const plans: WorkoutPlan[] = [
+// A plan with every exercise enriched from the catalogue (see enrichPlans).
+export type WorkoutPlan = Omit<PlanDefinition, "days"> & { days: WorkoutDay[] };
+
+export const planDefinitions: PlanDefinition[] = [
   {
     id: "barbell-strength",
     name: "Barbell Strength",
@@ -52,13 +56,13 @@ export const DEFAULT_PLAN_ID: PlanId = "barbell-strength";
 // Object.prototype is exactly the class of bug parseSessionsBlob guards
 // against — and it returns the registry's own literal, so no cast is needed.
 export function parseStoredPlanId(raw: string | null): PlanId | null {
-  return plans.find((plan) => plan.id === raw)?.id ?? null;
+  return planDefinitions.find((plan) => plan.id === raw)?.id ?? null;
 }
 
-export function planById(id: PlanId): WorkoutPlan {
+export function planById(id: PlanId, plans: WorkoutPlan[]): WorkoutPlan {
   const plan = plans.find((candidate) => candidate.id === id);
   // PlanId is a closed union and lib/plans.test.ts asserts every member is in
-  // `plans`, so this is unreachable — thrown rather than cast away.
+  // `planDefinitions`, so this is unreachable — thrown rather than cast away.
   if (plan === undefined) throw new Error(`Unknown plan id: ${id}`);
   return plan;
 }
@@ -67,9 +71,9 @@ export function planById(id: PlanId): WorkoutPlan {
 // unique across plans (asserted in lib/plans.test.ts), so this never contains
 // a duplicate — two plans sharing a day id would merge their session
 // histories, since a session keys on (dayId, dateKey) alone.
-export function knownDays(activeId: PlanId): WorkoutDay[] {
+export function knownDays(activeId: PlanId, plans: WorkoutPlan[]): WorkoutDay[] {
   return [
-    ...planById(activeId).days,
+    ...planById(activeId, plans).days,
     ...plans.filter((plan) => plan.id !== activeId).flatMap((plan) => plan.days),
   ];
 }
@@ -89,10 +93,43 @@ export function knownDays(activeId: PlanId): WorkoutDay[] {
 // the registry so it cannot drift.
 export const PLAN_INIT_SCRIPT = `(function () {
   try {
-    var ids = ${JSON.stringify(plans.map((plan) => plan.id))};
+    var ids = ${JSON.stringify(planDefinitions.map((plan) => plan.id))};
     var stored = localStorage.getItem(${JSON.stringify(PLAN_KEY)});
     if (ids.indexOf(stored) !== -1) {
       document.documentElement.setAttribute("data-plan", stored);
     }
   } catch (error) {}
 })();`;
+
+function enrichExercise(
+  exercise: PlanExercise,
+  catalogs: ReadonlyMap<string, CatalogExercise>[],
+): Exercise {
+  const entry = catalogs
+    .map((catalog) => catalog.get(exercise.name))
+    .find((found) => found !== undefined);
+  if (entry === undefined)
+    throw new Error(`No catalogue entry for plan exercise "${exercise.name}"`);
+  return {
+    ...exercise,
+    muscles: entry.muscleGroups,
+    movement: entry.movementPattern,
+    youtube: entry.videoUrl,
+    detailUrl: entry.detailUrl,
+  };
+}
+
+// Earlier catalogues win (live, then snapshot); lib/plans.test.ts keeps every plan
+// exercise in the snapshot, so enrichExercise never throws in a release.
+export function enrichPlans(
+  definitions: PlanDefinition[],
+  catalogs: ReadonlyMap<string, CatalogExercise>[],
+): WorkoutPlan[] {
+  return definitions.map((plan) => ({
+    ...plan,
+    days: plan.days.map((day) => ({
+      ...day,
+      exercises: day.exercises.map((exercise) => enrichExercise(exercise, catalogs)),
+    })),
+  }));
+}

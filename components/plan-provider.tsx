@@ -43,7 +43,7 @@ export function usePlan(): PlanContextValue {
 // by PLAN_INIT_SCRIPT in the layout; this provider re-derives the same answer
 // on mount and then keeps it live: other tabs and the settings page flow
 // through here.
-export function PlanProvider({ children }: { children: ReactNode }) {
+export function PlanProvider({ plans, children }: { plans: WorkoutPlan[]; children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [planId, setPlanIdState] = useState<PlanId>(DEFAULT_PLAN_ID);
 
@@ -90,11 +90,11 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     () => ({
       hydrated,
       planId,
-      plan: planById(planId),
-      knownDays: knownDays(planId),
+      plan: planById(planId, plans),
+      knownDays: knownDays(planId, plans),
       setPlanId,
     }),
-    [hydrated, planId, setPlanId],
+    [hydrated, planId, plans, setPlanId],
   );
 
   return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;

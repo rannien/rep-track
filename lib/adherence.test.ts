@@ -30,6 +30,7 @@ function makeExercise(overrides: Partial<Exercise> = {}): Exercise {
     muscles: ["Chest"],
     movement: "push",
     youtube: "https://www.youtube.com/results?search_query=bench+press+form",
+    detailUrl: "https://wwworkout.vercel.app/exercises/1",
     ...overrides,
   };
 }

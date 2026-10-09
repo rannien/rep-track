@@ -1,7 +1,7 @@
 "use client";
 
 import { usePlan } from "@/components/plan-provider";
-import { plans } from "@/lib/plans";
+import { planDefinitions } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 import { ClipboardList } from "lucide-react";
 
@@ -34,7 +34,7 @@ export function PlanSettings() {
         {/* Margin, not fieldset gap: a legend is not a flex item, so gap
             between it and the options never applies. */}
         <div className="mt-2 flex flex-col gap-2">
-          {plans.map((plan) => {
+          {planDefinitions.map((plan) => {
             const active = planId === plan.id;
             const exercises = plan.days.reduce((sum, day) => sum + day.exercises.length, 0);
             return (
