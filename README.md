@@ -11,7 +11,8 @@ backend, no data leaving your device.
 - **Two built-in plans** — a barbell strength A/B (heavy low-rep compounds plus accessories) and
   the original dumbbell hybrid A/B, both defined in code. Pick the active one under Settings →
   Training plan; the choice is remembered per device and applies before the page paints. Each
-  exercise shows target sets × reps, muscles, movement type, and a form-video search link.
+  exercise shows target sets × reps, muscles and movement type, with a form-video link and a link
+  to its page in the [WWWorkout](https://wwworkout.vercel.app) exercise catalogue.
   Switching plans moves nothing: History, Stats, Records and Compare read across both plans, so a
   non-active plan's exercises still count toward their real muscle groups.
 - **Set logging** — weight + reps per set, grouped into one session per training day and calendar
@@ -24,9 +25,12 @@ backend, no data leaving your device.
 - **History** — every session set by set, most recent first.
 - **Stats** — volume/reps per session, per-exercise totals, and exercise trends over time
   (including estimated 1RM), filterable by date range; view state lives in the URL.
+- **Compare** — import a training partner's exported backup to compare records and volume side
+  by side; it stays on this device and is never merged into your own history.
 - **Backup & restore** — export the whole history as a JSON file and import it on another device,
   either merged into or replacing the local history. A reminder nudges you when unbacked-up
   sessions accumulate.
+- **Settings** — training plan, light/dark/system theme, kg or lb, and rest-timer length.
 - **Offline-ready PWA** — a service worker keeps the app shell available when the gym's signal
   drops; sets are logged to localStorage regardless.
 
@@ -36,8 +40,10 @@ Next.js 16 (App Router, React 19, static prerender) · Tailwind CSS v4 · shadcn
 Base UI) · Recharts · TypeScript · vitest · oxlint + oxfmt · pnpm. Originally scaffolded with
 [v0.app](https://v0.app).
 
-There is no server-side logic: every route is statically prerendered, and all state lives in
-`localStorage` (treated as a trust boundary — stored payloads are runtime-validated on load).
+Every route is statically prerendered and all training state lives in `localStorage` (treated as
+a trust boundary — stored payloads are runtime-validated on load). The only server-side work is
+fetching exercise metadata from the WWWorkout catalogue, revalidated hourly (ISR); set
+`WWWORKOUT_URL` to point at another catalogue instance (default `https://wwworkout.vercel.app`).
 
 ## Getting started
 
@@ -55,6 +61,7 @@ pnpm dev        # http://localhost:3000
 | `pnpm format` / `pnpm format:check` | oxfmt                                                                |
 | `pnpm perf:bundle`                  | per-route bundle drift vs the recorded baseline (after `pnpm build`) |
 | `pnpm perf:latency`                 | TTFB percentile smoke against `$PERF_BASE_URL`                       |
+| `pnpm catalog:sync`                 | refresh the offline catalogue snapshot from WWWorkout                |
 
 CI runs formatting, linting, type-checking and tests on every push and pull request, alongside
 three scanning layers: a production dependency audit, CodeQL static analysis (SAST), and a
@@ -90,9 +97,10 @@ Data-integrity tests in `lib/workouts.test.ts` and `lib/plans.test.ts` guard all
 All training data stays in your browser's `localStorage`. There is no sync and no tracking of
 your training data; the only way it leaves the device is the backup file you export yourself.
 The only network request the app's server makes is fetching the public exercise catalogue from
-WWWorkout (refreshed hourly) — it sends nothing about you or your training. Device preferences — active plan, theme, units, rest length — live in `localStorage`
-too and are deliberately not part of the backup file, which holds sessions only. Browsers may evict local storage under pressure — export a backup now and then (the app
-reminds you).
+WWWorkout (refreshed hourly) — it sends nothing about you or your training. Device preferences —
+active plan, theme, units, rest length — live in `localStorage` too and are deliberately not part
+of the backup file, which holds sessions only. Browsers may evict local storage under pressure —
+export a backup now and then (the app reminds you).
 
 ## License
 
