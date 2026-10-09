@@ -149,11 +149,13 @@
    Adding a plan needs a selector here — the one place plan ids live outside
    TypeScript. The failure mode is graceful (a blank grid until hydration,
    then correct), which is why it's acceptable at two plans; past three or
-   four, generate this from the registry or move to per-plan routes. */
+   four, generate this from the registry or move to per-plan routes. Every
+   custom plan shares the one client-rendered "custom" panel. */
 [data-plan-panel] {
   display: none;
 }
 [data-plan="barbell-strength"] [data-plan-panel="barbell-strength"],
-[data-plan="dumbbell-hybrid"] [data-plan-panel="dumbbell-hybrid"] {
+[data-plan="dumbbell-hybrid"] [data-plan-panel="dumbbell-hybrid"],
+[data-plan^="custom-"] [data-plan-panel="custom"] {
   display: block;
 }

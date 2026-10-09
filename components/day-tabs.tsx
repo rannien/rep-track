@@ -17,8 +17,10 @@ export function DayTabs({ tabs }: { tabs: { day: WorkoutDay; content: ReactNode 
   const tabRefs = useRef(new Map<string, HTMLButtonElement>());
 
   const days = tabs.map((tab) => tab.day);
+  // A custom plan can lose the chosen day to an edit in another tab.
+  const chosen = days.some((day) => day.id === chosenDayId) ? chosenDayId : null;
   const selectedDayId =
-    chosenDayId ?? (hydrated ? defaultDayId(days, sessions, todayKey()) : days[0]?.id);
+    chosen ?? (hydrated ? defaultDayId(days, sessions, todayKey()) : days[0]?.id);
 
   function select(index: number) {
     const day = days[(index + days.length) % days.length];
@@ -43,7 +45,7 @@ export function DayTabs({ tabs }: { tabs: { day: WorkoutDay; content: ReactNode 
       <div
         role="tablist"
         aria-label="Training day"
-        className="grid auto-cols-fr grid-flow-col gap-1 rounded-2xl border border-border bg-secondary p-1"
+        className="grid auto-cols-[minmax(6.5rem,1fr)] grid-flow-col gap-1 overflow-x-auto rounded-2xl border border-border bg-secondary p-1"
       >
         {days.map((day, index) => {
           const selected = day.id === selectedDayId;

@@ -8,12 +8,20 @@ export type PlanExercise = {
   reps: number;
 };
 
+// movement and detailUrl are absent only for a custom-plan exercise the catalogue no longer has.
 export type Exercise = PlanExercise & {
   muscles: string[];
-  movement: Movement;
+  movement?: Movement;
   youtube: string;
-  detailUrl: string;
+  detailUrl?: string;
 };
+
+// Same search WWWorkout links to, for exercises the catalogue cannot supply a video_url for.
+export function youtubeSearchUrl(exerciseName: string): string {
+  const url = new URL("https://www.youtube.com/results");
+  url.searchParams.set("search_query", `${exerciseName} form`);
+  return url.toString();
+}
 
 export type PlanDay = {
   id: string;

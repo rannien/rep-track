@@ -5,8 +5,10 @@ import {
   backupFilename,
   mergeSessions,
   parseBackup,
+  parseBackupFile,
   serializeBackup,
 } from "./backup";
+import type { CustomPlan } from "./custom-plans";
 import type { Session } from "./sessions";
 
 function makeSession(overrides: Partial<Session> = {}): Session {
@@ -17,6 +19,24 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     dateKey: "2026-07-20",
     startedAt: "2026-07-20T10:00:00.000Z",
     entries: [{ exercise: "Bench Press", sets: [{ id: "set-1", reps: 8, weight: 80 }] }],
+    ...overrides,
+  };
+}
+
+function makePlan(overrides: Partial<CustomPlan> = {}): CustomPlan {
+  return {
+    id: "custom-00000000-0000-4000-8000-000000000100",
+    name: "Mine",
+    updatedAt: "2026-07-21T09:00:00.000Z",
+    days: [
+      {
+        id: "custom-00000000-0000-4000-8000-000000000101",
+        label: "Push",
+        title: "Upper",
+        focus: "Chest",
+        exercises: [{ name: "Bench Press", sets: 3, reps: 8 }],
+      },
+    ],
     ...overrides,
   };
 }
@@ -64,6 +84,91 @@ describe("serializeBackup / parseBackup round-trip", () => {
       "reps",
       "weight",
     ]);
+  });
+});
+
+describe("serializeBackup with custom plans", () => {
+  it("writes version 2", () => {
+    expect(BACKUP_VERSION).toBe(2);
+  });
+
+  it("adds the plans only when there are some", () => {
+    const withPlans = JSON.parse(
+      serializeBackup([makeSession()], "2026-07-22T09:00:00.000Z", [makePlan()]),
+    );
+    const withoutPlans = JSON.parse(
+      serializeBackup([makeSession()], "2026-07-22T09:00:00.000Z", []),
+    );
+
+    expect(withPlans.plans).toEqual([makePlan()]);
+    expect(Object.keys(withoutPlans)).not.toContain("plans");
+  });
+});
+
+describe("parseBackupFile", () => {
+  it("round-trips sessions and plans from a v2 file", () => {
+    const sessions = [makeSession()];
+    const plans = [makePlan()];
+
+    const restored = parseBackupFile(serializeBackup(sessions, "2026-07-22T09:00:00.000Z", plans));
+
+    expect(restored).toEqual({
+      sessions: { kind: "ok", sessions },
+      plans: { kind: "ok", plans },
+    });
+  });
+
+  it("reports no plans for a v1 envelope or a bare sessions array", () => {
+    const sessions = [makeSession()];
+    const v1 = JSON.stringify({ format: BACKUP_FORMAT, version: 1, exportedAt: "x", sessions });
+
+    expect(parseBackupFile(v1)).toEqual({ sessions: { kind: "ok", sessions }, plans: null });
+    expect(parseBackupFile(JSON.stringify(sessions)).plans).toBeNull();
+  });
+
+  it("restores the plans of a file with no sessions", () => {
+    const raw = JSON.stringify({
+      format: BACKUP_FORMAT,
+      version: 2,
+      sessions: [],
+      plans: [makePlan()],
+    });
+
+    expect(parseBackupFile(raw)).toEqual({
+      sessions: { kind: "ok", sessions: [] },
+      plans: { kind: "ok", plans: [makePlan()] },
+    });
+  });
+
+  it("drops invalid plans individually while the sessions still parse", () => {
+    const sessions = [makeSession()];
+    const raw = JSON.stringify({
+      sessions,
+      plans: [makePlan(), makePlan({ name: "n".repeat(41) })],
+    });
+
+    expect(parseBackupFile(raw)).toEqual({
+      sessions: { kind: "ok", sessions },
+      plans: { kind: "partial", plans: [makePlan()], dropped: 1 },
+    });
+  });
+
+  it("reports a plans value that is not an array as corrupt, keeping the sessions", () => {
+    const sessions = [makeSession()];
+
+    const result = parseBackupFile(JSON.stringify({ sessions, plans: { a: 1 } }));
+
+    expect(result).toEqual({
+      sessions: { kind: "ok", sessions },
+      plans: { kind: "corrupt", plans: [] },
+    });
+  });
+
+  it("reports unparseable JSON as corrupt sessions and no plans", () => {
+    expect(parseBackupFile("{not json")).toEqual({
+      sessions: { kind: "corrupt", sessions: [] },
+      plans: null,
+    });
   });
 });
 

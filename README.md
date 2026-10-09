@@ -15,6 +15,9 @@ backend, no data leaving your device.
   to its page in the [WWWorkout](https://wwworkout.vercel.app) exercise catalogue.
   Switching plans moves nothing: History, Stats, Records and Compare read across both plans, so a
   non-active plan's exercises still count toward their real muscle groups.
+- **Planner** — build your own plans: training days, exercises picked from the WWWorkout
+  catalogue (search by name, filter by muscle or movement), sets × reps. Start from scratch or a
+  copy of a built-in plan; up to ten plans per device, selectable in Settings like the built-ins.
 - **Set logging** — weight + reps per set, grouped into one session per training day and calendar
   date. A "last time" reference shows the previous session's sets for each exercise, set by set,
   to drive progressive overload.
@@ -27,8 +30,8 @@ backend, no data leaving your device.
   (including estimated 1RM), filterable by date range; view state lives in the URL.
 - **Compare** — import a training partner's exported backup to compare records and volume side
   by side; it stays on this device and is never merged into your own history.
-- **Backup & restore** — export the whole history as a JSON file and import it on another device,
-  either merged into or replacing the local history. A reminder nudges you when unbacked-up
+- **Backup & restore** — export the whole history and your custom plans as a JSON file and import
+  it on another device, either merged into or replacing what's there. A reminder nudges you when unbacked-up
   sessions accumulate.
 - **Settings** — training plan, light/dark/system theme, kg or lb, and rest-timer length.
 - **Offline-ready PWA** — a service worker keeps the app shell available when the gym's signal
@@ -73,7 +76,7 @@ the CI test path.
 The workout plans are data, not UI. Each plan is one module —
 [lib/plan-barbell-strength.ts](lib/plan-barbell-strength.ts),
 [lib/plan-dumbbell-hybrid.ts](lib/plan-dumbbell-hybrid.ts) — holding a `WorkoutDay[]`; edit one to
-change days, exercises, or targets. To add a plan, write a third module, register it in
+change days, exercises, or targets (or build your own in the Planner, no code needed). To add a plan, write a third module, register it in
 [lib/plans.ts](lib/plans.ts), and add its selector pair to the reveal rule at the bottom of
 [app/globals.css](app/globals.css).
 
@@ -90,7 +93,8 @@ Two identifiers are load-bearing:
   exactly the same name. Run `pnpm catalog:sync` to refresh the bundled snapshot
   (`lib/catalog-snapshot.json`) used when the catalogue is unreachable.
 
-Data-integrity tests in `lib/workouts.test.ts` and `lib/plans.test.ts` guard all of it.
+Data-integrity tests in `lib/workouts.test.ts` and `lib/plans.test.ts` guard all of it; custom plans
+built in the Planner are validated by `lib/custom-plans.ts` (tests in `lib/custom-plans.test.ts`).
 
 ## Data & privacy
 
@@ -99,7 +103,7 @@ your training data; the only way it leaves the device is the backup file you exp
 The only network request the app's server makes is fetching the public exercise catalogue from
 WWWorkout (refreshed hourly) — it sends nothing about you or your training. Device preferences —
 active plan, theme, units, rest length — live in `localStorage` too and are deliberately not part
-of the backup file, which holds sessions only. Browsers may evict local storage under pressure —
+of the backup file, which holds sessions and custom plans only. Browsers may evict local storage under pressure —
 export a backup now and then (the app reminds you).
 
 ## License

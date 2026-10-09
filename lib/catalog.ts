@@ -12,7 +12,7 @@ export type CatalogExercise = {
   videoUrl: string;
 };
 
-const MOVEMENTS: readonly Movement[] = ["push", "pull", "bend", "squat", "lunge", "flex"];
+export const MOVEMENTS: readonly Movement[] = ["push", "pull", "bend", "squat", "lunge", "flex"];
 const MECHANICS = ["compound", "isolation"] as const;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
 const VIDEO_ORIGIN = "https://www.youtube.com";
