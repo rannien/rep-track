@@ -33,6 +33,7 @@ function makeExercise(name: string): Exercise {
     muscles: ["Chest"],
     movement: "push",
     youtube: "https://www.youtube.com/results?search_query=form",
+    detailUrl: "https://wwworkout.vercel.app/exercises/1",
   };
 }
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { plans } from "@/lib/plans";
+import { getPlans } from "@/lib/catalog-source";
 import { WorkoutCard } from "@/components/workout-card";
 import { DayTabs } from "@/components/day-tabs";
 import { ExercisePanelProvider } from "@/components/exercise-panel-provider";
@@ -8,7 +8,9 @@ import { PageNav } from "@/components/page-nav";
 import { PlanPanels } from "@/components/plan-panels";
 import { Dumbbell } from "lucide-react";
 
-export default function Page() {
+export default async function Page() {
+  const plans = await getPlans();
+
   return (
     <main className="mx-auto min-h-screen w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-14">
       <header className="mb-6 flex flex-col gap-3 sm:mb-10">

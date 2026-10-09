@@ -76,16 +76,21 @@ Two identifiers are load-bearing:
   day id detaches every session already logged under it. Ids must also be unique across plans.
 - **Exercise names are the join key to logged history.** Renaming an exercise starts a fresh
   history for it; reusing a name across plans deliberately shares one history (which is why
-  Romanian Deadlift, Incline Dumbbell Press and Lat Pulldown appear in both plans), and those
-  shared entries must agree on muscles, movement and video link.
+  Romanian Deadlift, Incline Dumbbell Press and Lat Pulldown appear in both plans).
+- **Exercise names are also the join key to the [WWWorkout](https://wwworkout.vercel.app)
+  catalogue.** Plan files only declare name, sets and reps; muscles, movement, the video link and
+  the WWWorkout detail link come from the catalogue, so every plan exercise must exist there under
+  exactly the same name. Run `pnpm catalog:sync` to refresh the bundled snapshot
+  (`lib/catalog-snapshot.json`) used when the catalogue is unreachable.
 
 Data-integrity tests in `lib/workouts.test.ts` and `lib/plans.test.ts` guard all of it.
 
 ## Data & privacy
 
-All training data stays in your browser's `localStorage`. There is no server, no sync, and no
-tracking of your training data; the only way it leaves the device is the backup file you export
-yourself. Device preferences — active plan, theme, units, rest length — live in `localStorage`
+All training data stays in your browser's `localStorage`. There is no sync and no tracking of
+your training data; the only way it leaves the device is the backup file you export yourself.
+The only network request the app's server makes is fetching the public exercise catalogue from
+WWWorkout (refreshed hourly) — it sends nothing about you or your training. Device preferences — active plan, theme, units, rest length — live in `localStorage`
 too and are deliberately not part of the backup file, which holds sessions only. Browsers may evict local storage under pressure — export a backup now and then (the app
 reminds you).
 

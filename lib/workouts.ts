@@ -1,27 +1,42 @@
-export type Movement = "push" | "pull" | "hinge" | "squat";
+export type Movement = "push" | "pull" | "bend" | "squat" | "lunge" | "flex";
 
-export type Exercise = {
+// What a plan file declares; muscles, movement and links come from the
+// wwworkout catalogue (lib/catalog.ts) when lib/plans.ts enriches the plans.
+export type PlanExercise = {
   name: string;
   sets: number;
   reps: number;
+};
+
+export type Exercise = PlanExercise & {
   muscles: string[];
   movement: Movement;
   youtube: string;
+  detailUrl: string;
 };
 
-export type WorkoutDay = {
+export type PlanDay = {
   id: string;
   label: string;
   title: string;
   focus: string;
-  exercises: Exercise[];
+  exercises: PlanExercise[];
 };
+
+export type WorkoutDay = Omit<PlanDay, "exercises"> & { exercises: Exercise[] };
+
+// The catalogue sends lowercase muscle groups ("upper back"); title-case them for display.
+export function muscleLabel(muscle: string): string {
+  return muscle.replace(/\b\p{L}/gu, (letter) => letter.toUpperCase());
+}
 
 export const movementLabels: Record<Movement, string> = {
   push: "Push",
   pull: "Pull",
-  hinge: "Hinge",
+  bend: "Bend",
   squat: "Squat",
+  lunge: "Lunge",
+  flex: "Flex",
 };
 
 // Only id and label are needed here, so both functions below take the

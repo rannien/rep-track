@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "perf:bundle": "node perf/bundle-drift.mjs",
-    "perf:latency": "node perf/latency-smoke.mjs"
+    "perf:latency": "node perf/latency-smoke.mjs",
+    "catalog:sync": "node scripts/catalog-sync.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

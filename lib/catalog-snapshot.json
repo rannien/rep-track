@@ -1,0 +1,787 @@
+{
+  "exercises": [
+    {
+      "id": "1",
+      "name": "Deadlift",
+      "movement_pattern": "bend",
+      "mechanics": "compound",
+      "muscle_groups": ["hamstrings", "glutes", "lower back", "quadriceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/1",
+      "video_url": "https://www.youtube.com/results?search_query=Deadlift+form"
+    },
+    {
+      "id": "2",
+      "name": "Barbell Back Squat",
+      "movement_pattern": "squat",
+      "mechanics": "compound",
+      "muscle_groups": ["quadriceps", "glutes"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/2",
+      "video_url": "https://www.youtube.com/results?search_query=Barbell+Back+Squat+form"
+    },
+    {
+      "id": "3",
+      "name": "Romanian Deadlift",
+      "movement_pattern": "bend",
+      "mechanics": "compound",
+      "muscle_groups": ["hamstrings", "glutes", "lower back"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/3",
+      "video_url": "https://www.youtube.com/results?search_query=Romanian+Deadlift+form"
+    },
+    {
+      "id": "4",
+      "name": "Walking Lunges",
+      "movement_pattern": "lunge",
+      "mechanics": "compound",
+      "muscle_groups": ["quadriceps", "glutes", "hamstrings"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/4",
+      "video_url": "https://www.youtube.com/results?search_query=Walking+Lunges+form"
+    },
+    {
+      "id": "5",
+      "name": "Leg Extension",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["quadriceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/5",
+      "video_url": "https://www.youtube.com/results?search_query=Leg+Extension+form"
+    },
+    {
+      "id": "6",
+      "name": "Standing Hamstring Curl",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["hamstrings"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/6",
+      "video_url": "https://www.youtube.com/results?search_query=Standing+Hamstring+Curl+form"
+    },
+    {
+      "id": "7",
+      "name": "Seated Calf Raise",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["calves"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/7",
+      "video_url": "https://www.youtube.com/results?search_query=Seated+Calf+Raise+form"
+    },
+    {
+      "id": "8",
+      "name": "Incline Barbell Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["chest", "shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/8",
+      "video_url": "https://www.youtube.com/results?search_query=Incline+Barbell+Press+form"
+    },
+    {
+      "id": "9",
+      "name": "Pull-Up",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["lats", "biceps", "upper back"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/9",
+      "video_url": "https://www.youtube.com/results?search_query=Pull-Up+form"
+    },
+    {
+      "id": "10",
+      "name": "Barbell Bench Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["chest", "shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/10",
+      "video_url": "https://www.youtube.com/results?search_query=Barbell+Bench+Press+form"
+    },
+    {
+      "id": "11",
+      "name": "Straight Arm Pulldown",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["lats"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/11",
+      "video_url": "https://www.youtube.com/results?search_query=Straight+Arm+Pulldown+form"
+    },
+    {
+      "id": "12",
+      "name": "Cable Cross Over",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["chest"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/12",
+      "video_url": "https://www.youtube.com/results?search_query=Cable+Cross+Over+form"
+    },
+    {
+      "id": "13",
+      "name": "T-Bar Row",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["lats", "upper back", "biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/13",
+      "video_url": "https://www.youtube.com/results?search_query=T-Bar+Row+form"
+    },
+    {
+      "id": "14",
+      "name": "Incline Dumbbell Fly w/ Close Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["chest", "shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/14",
+      "video_url": "https://www.youtube.com/results?search_query=Incline+Dumbbell+Fly+w%2F+Close+Press+form"
+    },
+    {
+      "id": "15",
+      "name": "Bradford Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/15",
+      "video_url": "https://www.youtube.com/results?search_query=Bradford+Press+form"
+    },
+    {
+      "id": "16",
+      "name": "Incline Dumbbell Fly",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["chest"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/16",
+      "video_url": "https://www.youtube.com/results?search_query=Incline+Dumbbell+Fly+form"
+    },
+    {
+      "id": "17",
+      "name": "Chest Dip (body weight)",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["chest", "triceps", "shoulders"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/17",
+      "video_url": "https://www.youtube.com/results?search_query=Chest+Dip+%28body+weight%29+form"
+    },
+    {
+      "id": "18",
+      "name": "Standing French Press",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/18",
+      "video_url": "https://www.youtube.com/results?search_query=Standing+French+Press+form"
+    },
+    {
+      "id": "19",
+      "name": "Dumbbell Kickback",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/19",
+      "video_url": "https://www.youtube.com/results?search_query=Dumbbell+Kickback+form"
+    },
+    {
+      "id": "20",
+      "name": "Single Arm Dumbbell Row",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["lats", "upper back", "biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/20",
+      "video_url": "https://www.youtube.com/results?search_query=Single+Arm+Dumbbell+Row+form"
+    },
+    {
+      "id": "21",
+      "name": "Underhand Barbell Row",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["lats", "upper back", "biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/21",
+      "video_url": "https://www.youtube.com/results?search_query=Underhand+Barbell+Row+form"
+    },
+    {
+      "id": "22",
+      "name": "Incline Dumbbell Curl",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/22",
+      "video_url": "https://www.youtube.com/results?search_query=Incline+Dumbbell+Curl+form"
+    },
+    {
+      "id": "23",
+      "name": "Preacher Curl",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/23",
+      "video_url": "https://www.youtube.com/results?search_query=Preacher+Curl+form"
+    },
+    {
+      "id": "24",
+      "name": "Leg Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["quadriceps", "glutes", "hamstrings"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/24",
+      "video_url": "https://www.youtube.com/results?search_query=Leg+Press+form"
+    },
+    {
+      "id": "25",
+      "name": "Standing Leg Curl (machine)",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["hamstrings"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/25",
+      "video_url": "https://www.youtube.com/results?search_query=Standing+Leg+Curl+%28machine%29+form"
+    },
+    {
+      "id": "26",
+      "name": "Overhead Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/26",
+      "video_url": "https://www.youtube.com/results?search_query=Overhead+Press+form"
+    },
+    {
+      "id": "27",
+      "name": "Upright Row",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["shoulders", "traps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/27",
+      "video_url": "https://www.youtube.com/results?search_query=Upright+Row+form"
+    },
+    {
+      "id": "28",
+      "name": "Lateral Raises",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["shoulders"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/28",
+      "video_url": "https://www.youtube.com/results?search_query=Lateral+Raises+form"
+    },
+    {
+      "id": "29",
+      "name": "Face Pull",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["rear delts", "upper back"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/29",
+      "video_url": "https://www.youtube.com/results?search_query=Face+Pull+form"
+    },
+    {
+      "id": "30",
+      "name": "Barbell Shrug",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["traps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/30",
+      "video_url": "https://www.youtube.com/results?search_query=Barbell+Shrug+form"
+    },
+    {
+      "id": "31",
+      "name": "Standing Arnold Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/31",
+      "video_url": "https://www.youtube.com/results?search_query=Standing+Arnold+Press+form"
+    },
+    {
+      "id": "32",
+      "name": "Single Cable Lateral Raise (behind back)",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["shoulders"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/32",
+      "video_url": "https://www.youtube.com/results?search_query=Single+Cable+Lateral+Raise+%28behind+back%29+form"
+    },
+    {
+      "id": "33",
+      "name": "Barbell Front Raise",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["shoulders"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/33",
+      "video_url": "https://www.youtube.com/results?search_query=Barbell+Front+Raise+form"
+    },
+    {
+      "id": "34",
+      "name": "Dumbbell Shrug",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["traps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/34",
+      "video_url": "https://www.youtube.com/results?search_query=Dumbbell+Shrug+form"
+    },
+    {
+      "id": "35",
+      "name": "Barbell Skull Crusher",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/35",
+      "video_url": "https://www.youtube.com/results?search_query=Barbell+Skull+Crusher+form"
+    },
+    {
+      "id": "36",
+      "name": "Barbell Curl",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/36",
+      "video_url": "https://www.youtube.com/results?search_query=Barbell+Curl+form"
+    },
+    {
+      "id": "37",
+      "name": "Rope Extension",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/37",
+      "video_url": "https://www.youtube.com/results?search_query=Rope+Extension+form"
+    },
+    {
+      "id": "38",
+      "name": "Hammer Curls",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/38",
+      "video_url": "https://www.youtube.com/results?search_query=Hammer+Curls+form"
+    },
+    {
+      "id": "39",
+      "name": "Triceps Dip (lockout)",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["triceps", "shoulders"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/39",
+      "video_url": "https://www.youtube.com/results?search_query=Triceps+Dip+%28lockout%29+form"
+    },
+    {
+      "id": "40",
+      "name": "Concentration Curl",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/40",
+      "video_url": "https://www.youtube.com/results?search_query=Concentration+Curl+form"
+    },
+    {
+      "id": "41",
+      "name": "Hip Extension (lifts)",
+      "movement_pattern": "bend",
+      "mechanics": "compound",
+      "muscle_groups": ["glutes", "hamstrings", "lower back"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/41",
+      "video_url": "https://www.youtube.com/results?search_query=Hip+Extension+%28lifts%29+form"
+    },
+    {
+      "id": "42",
+      "name": "Front Squat",
+      "movement_pattern": "squat",
+      "mechanics": "compound",
+      "muscle_groups": ["quadriceps", "glutes"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/42",
+      "video_url": "https://www.youtube.com/results?search_query=Front+Squat+form"
+    },
+    {
+      "id": "43",
+      "name": "Single Leg Romanian Deadlift",
+      "movement_pattern": "bend",
+      "mechanics": "compound",
+      "muscle_groups": ["hamstrings", "glutes", "lower back"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/43",
+      "video_url": "https://www.youtube.com/results?search_query=Single+Leg+Romanian+Deadlift+form"
+    },
+    {
+      "id": "44",
+      "name": "Donkey Calf Raise",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["calves"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/44",
+      "video_url": "https://www.youtube.com/results?search_query=Donkey+Calf+Raise+form"
+    },
+    {
+      "id": "45",
+      "name": "Bent Over T-Bar Row",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["lats", "upper back", "biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/45",
+      "video_url": "https://www.youtube.com/results?search_query=Bent+Over+T-Bar+Row+form"
+    },
+    {
+      "id": "46",
+      "name": "Flat Dumbbell Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["chest", "shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/46",
+      "video_url": "https://www.youtube.com/results?search_query=Flat+Dumbbell+Press+form"
+    },
+    {
+      "id": "47",
+      "name": "Dumbbell Pullover",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["chest", "lats", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/47",
+      "video_url": "https://www.youtube.com/results?search_query=Dumbbell+Pullover+form"
+    },
+    {
+      "id": "48",
+      "name": "Landmine Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["shoulders", "chest", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/48",
+      "video_url": "https://www.youtube.com/results?search_query=Landmine+Press+form"
+    },
+    {
+      "id": "49",
+      "name": "Single Arm Dumbbell Row (Chainsaws)",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["lats", "upper back", "biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/49",
+      "video_url": "https://www.youtube.com/results?search_query=Single+Arm+Dumbbell+Row+%28Chainsaws%29+form"
+    },
+    {
+      "id": "50",
+      "name": "Chest Dip (weighted)",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["chest", "triceps", "shoulders"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/50",
+      "video_url": "https://www.youtube.com/results?search_query=Chest+Dip+%28weighted%29+form"
+    },
+    {
+      "id": "51",
+      "name": "Bulgarian Split Squat",
+      "movement_pattern": "lunge",
+      "mechanics": "compound",
+      "muscle_groups": ["quadriceps", "glutes"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/51",
+      "video_url": "https://www.youtube.com/results?search_query=Bulgarian+Split+Squat+form"
+    },
+    {
+      "id": "52",
+      "name": "Seated Hamstring Curl",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["hamstrings"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/52",
+      "video_url": "https://www.youtube.com/results?search_query=Seated+Hamstring+Curl+form"
+    },
+    {
+      "id": "53",
+      "name": "Upright Row (wide grip)",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["shoulders", "traps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/53",
+      "video_url": "https://www.youtube.com/results?search_query=Upright+Row+%28wide+grip%29+form"
+    },
+    {
+      "id": "54",
+      "name": "Bent Over Dumbbell Reverse Fly",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["rear delts", "upper back"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/54",
+      "video_url": "https://www.youtube.com/results?search_query=Bent+Over+Dumbbell+Reverse+Fly+form"
+    },
+    {
+      "id": "55",
+      "name": "Reverse Upright Row",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["shoulders", "traps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/55",
+      "video_url": "https://www.youtube.com/results?search_query=Reverse+Upright+Row+form"
+    },
+    {
+      "id": "56",
+      "name": "Alternating Dumbbell Front Raise",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["shoulders"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/56",
+      "video_url": "https://www.youtube.com/results?search_query=Alternating+Dumbbell+Front+Raise+form"
+    },
+    {
+      "id": "57",
+      "name": "Cable Row",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["lats", "upper back", "biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/57",
+      "video_url": "https://www.youtube.com/results?search_query=Cable+Row+form"
+    },
+    {
+      "id": "59",
+      "name": "Underhand Pulldown",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["lats", "upper back", "biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/59",
+      "video_url": "https://www.youtube.com/results?search_query=Underhand+Pulldown+form"
+    },
+    {
+      "id": "60",
+      "name": "Alternating Dumbbell Hammer Curl",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/60",
+      "video_url": "https://www.youtube.com/results?search_query=Alternating+Dumbbell+Hammer+Curl+form"
+    },
+    {
+      "id": "61",
+      "name": "Preacher Bench Concentration Curl",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/61",
+      "video_url": "https://www.youtube.com/results?search_query=Preacher+Bench+Concentration+Curl+form"
+    },
+    {
+      "id": "62",
+      "name": "Flat Barbell Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["chest", "shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/62",
+      "video_url": "https://www.youtube.com/results?search_query=Flat+Barbell+Press+form"
+    },
+    {
+      "id": "63",
+      "name": "Underhand Cable Fly",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["chest"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/63",
+      "video_url": "https://www.youtube.com/results?search_query=Underhand+Cable+Fly+form"
+    },
+    {
+      "id": "64",
+      "name": "Decline Dumbbell Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["chest", "shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/64",
+      "video_url": "https://www.youtube.com/results?search_query=Decline+Dumbbell+Press+form"
+    },
+    {
+      "id": "65",
+      "name": "EZ-bar Skull Crusher",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/65",
+      "video_url": "https://www.youtube.com/results?search_query=EZ-bar+Skull+Crusher+form"
+    },
+    {
+      "id": "66",
+      "name": "Cross Bench Dip (weighted)",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["triceps", "chest", "shoulders"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/66",
+      "video_url": "https://www.youtube.com/results?search_query=Cross+Bench+Dip+%28weighted%29+form"
+    },
+    {
+      "id": "67",
+      "name": "Step-Up (weighted)",
+      "movement_pattern": "lunge",
+      "mechanics": "compound",
+      "muscle_groups": ["quadriceps", "glutes", "hamstrings"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/67",
+      "video_url": "https://www.youtube.com/results?search_query=Step-Up+%28weighted%29+form"
+    },
+    {
+      "id": "68",
+      "name": "Dumbbell Romanian Deadlift",
+      "movement_pattern": "bend",
+      "mechanics": "compound",
+      "muscle_groups": ["hamstrings", "glutes", "lower back"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/68",
+      "video_url": "https://www.youtube.com/results?search_query=Dumbbell+Romanian+Deadlift+form"
+    },
+    {
+      "id": "69",
+      "name": "Single Leg Extension",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["quadriceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/69",
+      "video_url": "https://www.youtube.com/results?search_query=Single+Leg+Extension+form"
+    },
+    {
+      "id": "70",
+      "name": "Lying Leg Curl",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["hamstrings"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/70",
+      "video_url": "https://www.youtube.com/results?search_query=Lying+Leg+Curl+form"
+    },
+    {
+      "id": "71",
+      "name": "Calf Raises",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["calves"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/71",
+      "video_url": "https://www.youtube.com/results?search_query=Calf+Raises+form"
+    },
+    {
+      "id": "72",
+      "name": "Hack Squat",
+      "movement_pattern": "squat",
+      "mechanics": "compound",
+      "muscle_groups": ["quadriceps", "glutes"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/72",
+      "video_url": "https://www.youtube.com/results?search_query=Hack+Squat+form"
+    },
+    {
+      "id": "74",
+      "name": "Bent-knee V-sit",
+      "movement_pattern": "flex",
+      "mechanics": "isolation",
+      "muscle_groups": ["abs"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/74",
+      "video_url": "https://www.youtube.com/results?search_query=Bent-knee+V-sit+form"
+    },
+    {
+      "id": "75",
+      "name": "Waiter Curl",
+      "movement_pattern": "pull",
+      "mechanics": "isolation",
+      "muscle_groups": ["biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/75",
+      "video_url": "https://www.youtube.com/results?search_query=Waiter+Curl+form"
+    },
+    {
+      "id": "76",
+      "name": "Leg Raise",
+      "movement_pattern": "flex",
+      "mechanics": "isolation",
+      "muscle_groups": ["abs"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/76",
+      "video_url": "https://www.youtube.com/results?search_query=Leg+Raise+form"
+    },
+    {
+      "id": "77",
+      "name": "Good Morning",
+      "movement_pattern": "bend",
+      "mechanics": "compound",
+      "muscle_groups": ["hamstrings", "glutes", "lower back"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/77",
+      "video_url": "https://www.youtube.com/results?search_query=Good+Morning+form"
+    },
+    {
+      "id": "78",
+      "name": "Machine Ab Crunch",
+      "movement_pattern": "flex",
+      "mechanics": "isolation",
+      "muscle_groups": ["abs"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/78",
+      "video_url": "https://www.youtube.com/results?search_query=Machine+Ab+Crunch+form"
+    },
+    {
+      "id": "79",
+      "name": "Bent-Over Dumbbell Rows",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["lats", "upper back", "biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/79",
+      "video_url": "https://www.youtube.com/results?search_query=Bent-Over+Dumbbell+Rows+form"
+    },
+    {
+      "id": "80",
+      "name": "Close-Grip Bench Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["triceps", "chest", "shoulders"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/80",
+      "video_url": "https://www.youtube.com/results?search_query=Close-Grip+Bench+Press+form"
+    },
+    {
+      "id": "81",
+      "name": "Incline Dumbbell Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["chest", "shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/81",
+      "video_url": "https://www.youtube.com/results?search_query=Incline+Dumbbell+Press+form"
+    },
+    {
+      "id": "82",
+      "name": "Lat Pulldown",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["lats", "upper back", "biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/82",
+      "video_url": "https://www.youtube.com/results?search_query=Lat+Pulldown+form"
+    },
+    {
+      "id": "83",
+      "name": "Pec Deck",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["chest"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/83",
+      "video_url": "https://www.youtube.com/results?search_query=Pec+Deck+form"
+    },
+    {
+      "id": "84",
+      "name": "Seated Arnold Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/84",
+      "video_url": "https://www.youtube.com/results?search_query=Seated+Arnold+Press+form"
+    },
+    {
+      "id": "85",
+      "name": "Seated Dumbbell Overhead Press",
+      "movement_pattern": "push",
+      "mechanics": "compound",
+      "muscle_groups": ["shoulders", "triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/85",
+      "video_url": "https://www.youtube.com/results?search_query=Seated+Dumbbell+Overhead+Press+form"
+    },
+    {
+      "id": "86",
+      "name": "Overhead Triceps Extension",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/86",
+      "video_url": "https://www.youtube.com/results?search_query=Overhead+Triceps+Extension+form"
+    },
+    {
+      "id": "87",
+      "name": "Cable Push Out",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["triceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/87",
+      "video_url": "https://www.youtube.com/results?search_query=Cable+Push+Out+form"
+    },
+    {
+      "id": "88",
+      "name": "Cable Lateral Raises",
+      "movement_pattern": "push",
+      "mechanics": "isolation",
+      "muscle_groups": ["shoulders"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/88",
+      "video_url": "https://www.youtube.com/results?search_query=Cable+Lateral+Raises+form"
+    },
+    {
+      "id": "89",
+      "name": "Standing Cable Row",
+      "movement_pattern": "pull",
+      "mechanics": "compound",
+      "muscle_groups": ["lats", "upper back", "biceps"],
+      "detail_url": "https://wwworkout.vercel.app/exercises/89",
+      "video_url": "https://www.youtube.com/results?search_query=Standing+Cable+Row+form"
+    }
+  ]
+}
