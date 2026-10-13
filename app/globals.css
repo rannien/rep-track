@@ -46,6 +46,20 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+@theme {
+  --animate-ghost-float: ghost-float 3.2s ease-in-out infinite;
+
+  @keyframes ghost-float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-4deg);
+    }
+    50% {
+      transform: translateY(-3px) rotate(4deg);
+    }
+  }
+}
+
 :root {
   --background: oklch(0.985 0.002 90);
   --foreground: oklch(0.18 0.01 60);
@@ -75,6 +89,7 @@
   --chart-4: #eda100; /* yellow */
   --chart-5: #e87ba4; /* magenta */
   --radius: 0.625rem;
+  --halloween-glow: oklch(0.72 0.17 50 / 0.14);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -113,6 +128,7 @@
   --chart-3: #199e70;
   --chart-4: #c98500;
   --chart-5: #d55181;
+  --halloween-glow: oklch(0.62 0.17 45 / 0.16);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -158,4 +174,19 @@
 [data-plan="dumbbell-hybrid"] [data-plan-panel="dumbbell-hybrid"],
 [data-plan^="custom-"] [data-plan-panel="custom"] {
   display: block;
+}
+
+/* Unlayered so it beats utilities; stamped by components/season-stamp.tsx. */
+html:not([data-season="halloween"]) [data-season-only="halloween"],
+html[data-season="halloween"] [data-season-hide="halloween"] {
+  display: none;
+}
+
+html[data-season="halloween"] body {
+  background-image: radial-gradient(
+    ellipse 90% 28rem at 50% -6rem,
+    var(--halloween-glow),
+    transparent
+  );
+  background-repeat: no-repeat;
 }

@@ -5,7 +5,7 @@ import { LoggingDateProvider } from "@/components/logging-date-provider";
 import { PageNav } from "@/components/page-nav";
 import { PlanPanels } from "@/components/plan-panels";
 import { PlanView } from "@/components/plan-view";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, Ghost } from "lucide-react";
 
 export default async function Page() {
   const plans = await getPlans();
@@ -25,7 +25,12 @@ export default async function Page() {
           <PageNav current="plan" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground text-balance sm:text-4xl">
-          Weekly Training Program
+          Weekly Training Program{" "}
+          <Ghost
+            className="inline size-6 animate-ghost-float align-[-0.1em] text-chart-2 motion-reduce:animate-none sm:size-8"
+            aria-hidden="true"
+            data-season-only="halloween"
+          />
         </h1>
         {/* Plan-neutral: which plan is active is a per-device preference the
             server can't know, so the day and exercise counts live on each
