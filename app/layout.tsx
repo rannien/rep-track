@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PlanProvider } from "@/components/plan-provider";
 import { RestTimerProvider } from "@/components/rest-timer-provider";
+import { SeasonStamp } from "@/components/season-stamp";
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
 import { SessionProvider } from "@/components/session-provider";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -100,11 +101,18 @@ export default async function RootLayout({
             tech; the sr-only words make it read "Made with love and AI for
             humans". */}
         <footer className="mx-auto w-full max-w-5xl px-4 pb-8 text-center text-xs text-muted-foreground sm:px-6">
-          Made with <span aria-hidden="true">❤️</span>
+          Made with{" "}
+          <span aria-hidden="true" data-season-hide="halloween">
+            ❤️
+          </span>
+          <span aria-hidden="true" data-season-only="halloween">
+            🎃
+          </span>
           <span className="sr-only">love</span> and <span aria-hidden="true">🤖</span>
           <span className="sr-only">AI</span> for <span aria-hidden="true">👥</span>
           <span className="sr-only">humans</span>
         </footer>
+        <SeasonStamp />
         <ServiceWorkerRegistrar />
         {/* Dev-safe unconditionally: @vercel/analytics runs in debug mode
             outside production and sends nothing. */}
