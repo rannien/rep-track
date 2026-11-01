@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import type { Exercise } from "@/lib/workouts";
+import { type Exercise, movementLabels, muscleLabel } from "@/lib/workouts";
 import { exerciseProgress } from "@/lib/adherence";
-import { MovementBadge, MuscleBadge } from "@/components/badges";
 import { useExercisePanel } from "@/components/exercise-panel-provider";
 import { useLoggingDate } from "@/components/logging-date-provider";
 import { useRestTimer } from "@/components/rest-timer-provider";
@@ -23,7 +22,7 @@ import {
 } from "@/lib/sessions";
 import {
   Play,
-  Plus,
+  ChevronDown,
   CircleCheck,
   Dumbbell,
   Pencil,
@@ -51,6 +50,9 @@ function scrollAboveKeyboard(el: HTMLElement) {
   window.scrollBy({ top: distance, behavior: reduceMotion ? "auto" : "smooth" });
 }
 
+const panelLinkClass =
+  "inline-flex h-8 items-center gap-1.5 rounded-full bg-primary/10 px-3 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+
 export function ExerciseRow({
   exercise,
   dayId,
@@ -77,10 +79,11 @@ export function ExerciseRow({
   const [editWeight, setEditWeight] = useState("");
   const [editReps, setEditReps] = useState("");
   const [editDouble, setEditDouble] = useState(false);
-  const [editAnnouncement, setEditAnnouncement] = useState("");
+  const [announcement, setAnnouncement] = useState("");
   const weightInputRef = useRef<HTMLInputElement>(null);
   const editWeightInputRef = useRef<HTMLInputElement>(null);
-  // Set id whose pencil button should regain focus once edit mode exits.
+  // Set id whose pencil button takes focus on the next render — after an edit
+  // exits, or when a neighbouring set is removed.
   const pencilFocusRef = useRef<string | null>(null);
   const rowRef = useRef<HTMLLIElement>(null);
 
@@ -90,6 +93,10 @@ export function ExerciseRow({
   const session = sessionOn(dayId, activeDate);
   const todaysSets = session?.entries.find((e) => e.exercise === exercise.name)?.sets ?? [];
   const progress = exerciseProgress(session, exercise);
+  const targetsLine = [
+    ...exercise.muscles.map(muscleLabel),
+    ...(exercise.movement ? [movementLabels[exercise.movement]] : []),
+  ].join(" · ");
   // `sessions` is referentially stable across keystrokes (reps/weight are
   // local state), so the full-history scan only reruns when a set changes.
   const last = useMemo(
@@ -108,8 +115,7 @@ export function ExerciseRow({
   // baseline silently rather than firing a hollow PR on every new exercise.
   const isPR = priorBest > 0 && todayBest > priorBest;
   const currentBest = Math.max(priorBest, todayBest);
-  // The badge shows the set actually lifted (e.g. "100 kg × 8"), not the
-  // extrapolated 1RM — that estimate lives in the tooltip instead.
+  // The badge shows the set actually lifted (e.g. "100 kg × 8"), not the estimated 1RM.
   const prSet = isPR ? bestOneRepMaxSet(todaysSets) : null;
 
   // The set you're about to log, and what you did for that same set last time.
@@ -178,7 +184,7 @@ export function ExerciseRow({
       weight: editWeightValue,
       double: editDouble,
     });
-    setEditAnnouncement(
+    setAnnouncement(
       `Set ${setNumber} updated: ${formatSet(
         { reps: editRepsValue, weight: editWeightValue, double: editDouble },
         unit,
@@ -186,6 +192,18 @@ export function ExerciseRow({
     );
     pencilFocusRef.current = editingSetId;
     setEditingSetId(null);
+  }
+
+  function handleRemove(index: number) {
+    if (!session) return;
+    const neighbour = todaysSets[index + 1] ?? todaysSets[index - 1];
+    if (neighbour && neighbour.id !== editingSetId) {
+      pencilFocusRef.current = neighbour.id;
+    } else {
+      weightInputRef.current?.focus();
+    }
+    setAnnouncement(`Set ${index + 1} removed. Undo available.`);
+    removeSet(session.id, exercise.name, todaysSets[index].id);
   }
 
   function handleAdd() {
@@ -200,6 +218,12 @@ export function ExerciseRow({
     // is the user gesture the completion beep needs to satisfy autoplay
     // policy. A backfilled set is data entry, not training: no countdown.
     if (!backdated) startRest();
+    setAnnouncement(
+      `Set ${nextSetNumber} logged: ${formatSet(
+        { reps: repsValue, weight: weightValue, double },
+        unit,
+      )}.`,
+    );
     setReps(String(repsValue));
     setWeight("");
     weightInputRef.current?.focus();
@@ -215,19 +239,11 @@ export function ExerciseRow({
           : "border-l-transparent hover:bg-secondary/40",
       )}
     >
-      <div className="flex items-center gap-3">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h3 className="font-semibold text-card-foreground">{exercise.name}</h3>
-            {exercise.movement ? <MovementBadge movement={exercise.movement} /> : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {exercise.muscles.map((muscle) => (
-              <MuscleBadge key={muscle} label={muscle} />
-            ))}
-            <span className="text-xs font-medium text-muted-foreground">
-              {exercise.sets} {"×"} {exercise.reps}
-            </span>
+      <div className="relative flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h3 className="leading-snug font-semibold text-card-foreground">{exercise.name}</h3>
+          {targetsLine ? <p className="text-xs text-muted-foreground">{targetsLine}</p> : null}
+          <div className="flex flex-wrap items-center gap-1.5 empty:hidden">
             {hydrated && progress.logged > 0 ? (
               <span
                 className={cn(
@@ -244,10 +260,7 @@ export function ExerciseRow({
               </span>
             ) : null}
             {hydrated && prSet ? (
-              <span
-                title={`Estimated 1RM ${formatOneRepMax(todayBest, unit)}`}
-                className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400"
-              >
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
                 <Trophy className="size-3" aria-hidden="true" />
                 New PR · {formatSet(prSet, unit)}
               </span>
@@ -262,43 +275,34 @@ export function ExerciseRow({
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setOpenPanel(open ? null : panelKey)}
-            aria-expanded={open}
-            aria-label={`Log a set for ${exercise.name}`}
-            className="inline-flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <Plus
-              className={cn(
-                "size-4 transition-transform duration-300 ease-in-out",
-                open ? "rotate-45" : "rotate-0",
-              )}
-              aria-hidden="true"
-            />
-          </button>
-          <a
-            href={exercise.youtube}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Watch ${exercise.name} tutorial on YouTube (opens in a new tab)`}
-            className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <Play className="size-4 fill-current" aria-hidden="true" />
-          </a>
-          {exercise.detailUrl ? (
-            <a
-              href={exercise.detailUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Open ${exercise.name} in WWWorkout (opens in a new tab)`}
-              className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <BookOpen className="size-4" aria-hidden="true" />
-            </a>
-          ) : null}
-        </div>
+        <p className="inline-flex min-w-16 shrink-0 items-baseline justify-center rounded-lg bg-primary/10 px-2 py-1 text-lg leading-none font-bold text-primary tabular-nums dark:bg-primary/15">
+          <span aria-hidden="true">
+            {exercise.sets}
+            <span className="mx-1 text-sm font-semibold">{"×"}</span>
+            {exercise.reps}
+          </span>
+          <span className="sr-only">
+            {`${exercise.sets} ${exercise.sets === 1 ? "set" : "sets"} of ${exercise.reps} ${exercise.reps === 1 ? "rep" : "reps"}`}
+          </span>
+        </p>
+
+        {/* The ::after overlay stretches this button over the whole header, so
+            the row itself is the tap target. */}
+        <button
+          type="button"
+          onClick={() => setOpenPanel(open ? null : panelKey)}
+          aria-expanded={open}
+          aria-label={`Log a set for ${exercise.name}`}
+          className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors outline-none after:absolute after:-inset-1.5 after:rounded-lg focus-visible:after:outline-2 focus-visible:after:outline-ring"
+        >
+          <ChevronDown
+            className={cn(
+              "size-5 transition-transform duration-300 ease-in-out",
+              open ? "rotate-180 text-primary" : "rotate-0",
+            )}
+            aria-hidden="true"
+          />
+        </button>
       </div>
 
       <div
@@ -320,22 +324,121 @@ export function ExerciseRow({
       >
         <div className="overflow-hidden">
           <div className="mt-3 flex flex-col gap-3 rounded-xl border border-border bg-secondary/30 p-3">
-            {/* Standing estimated 1RM benchmark for this exercise */}
-            {hydrated && currentBest > 0 ? (
-              <div className="flex items-center justify-between gap-2 text-xs">
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <TrendingUp className="size-3.5 text-primary" aria-hidden="true" />
-                  Best est. 1RM
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={exercise.youtube}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={panelLinkClass}
+              >
+                <Play className="size-3.5 fill-current" aria-hidden="true" />
+                Video
+                <span className="sr-only">
+                  {`: ${exercise.name} tutorial on YouTube (opens in a new tab)`}
                 </span>
-                <span className="font-semibold tabular-nums text-card-foreground">
-                  {formatOneRepMax(currentBest, unit)}
-                </span>
-              </div>
-            ) : null}
+              </a>
+              {exercise.detailUrl ? (
+                <a
+                  href={exercise.detailUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={panelLinkClass}
+                >
+                  <BookOpen className="size-3.5" aria-hidden="true" />
+                  Guide
+                  <span className="sr-only">
+                    {`: ${exercise.name} in WWWorkout (opens in a new tab)`}
+                  </span>
+                </a>
+              ) : null}
+            </div>
 
-            {/* Sets logged in today's session */}
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                <span className="flex items-center gap-2 text-xs font-semibold text-card-foreground">
+                  Set {nextSetNumber}
+                  <button
+                    type="button"
+                    onClick={() => setDouble((prev) => !prev)}
+                    aria-pressed={double}
+                    aria-label="Two dumbbells — counts double"
+                    className={cn(
+                      "inline-flex h-6 shrink-0 items-center justify-center rounded-md border px-2 text-xs font-semibold tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                      double
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-muted-foreground hover:bg-secondary/60",
+                    )}
+                  >
+                    ×2
+                  </button>
+                </span>
+                {target ? (
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">
+                    Last time:{" "}
+                    <span className="font-medium text-primary">{formatSet(target, unit)}</span>
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex items-end gap-2">
+                <label className="flex flex-1 flex-col gap-1">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Weight ({unit})
+                  </span>
+                  <input
+                    ref={weightInputRef}
+                    type="text"
+                    inputMode="decimal"
+                    value={weight}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/^[0-9.,]*$/.test(val)) {
+                        setWeight(val);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAdd();
+                    }}
+                    placeholder={
+                      target && target.weight > 0 ? String(weightFromKg(target.weight, unit)) : "0"
+                    }
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </label>
+                <label className="flex flex-1 flex-col gap-1">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Reps
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={reps}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (/^\d*$/.test(val)) {
+                        setReps(val);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAdd();
+                    }}
+                    placeholder={target ? String(target.reps) : String(exercise.reps)}
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAdd}
+                  disabled={!canSave}
+                  className="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:opacity-50"
+                >
+                  <Check className="size-4" aria-hidden="true" />
+                  Save
+                </button>
+              </div>
+            </div>
+
             {hydrated && todaysSets.length > 0 ? (
-              <ul className="flex flex-col gap-1.5">
+              <ul aria-label="Sets logged today" className="flex flex-col gap-1.5">
                 {todaysSets.map((log, i) => {
                   const ref = last?.entry.sets[i];
                   const editing = editingSetId === log.id;
@@ -467,7 +570,7 @@ export function ExerciseRow({
                           </button>
                           <button
                             type="button"
-                            onClick={() => session && removeSet(session.id, exercise.name, log.id)}
+                            onClick={() => handleRemove(i)}
                             aria-label={`Remove set ${i + 1}`}
                             className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                           >
@@ -481,93 +584,22 @@ export function ExerciseRow({
               </ul>
             ) : null}
 
-            {/* Edits are announced once; the visible set list already updated. */}
             <output className="sr-only" aria-live="polite">
-              {editAnnouncement}
+              {announcement}
             </output>
 
-            {/* Add the next set; hint shows the matching set from last time */}
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                <span className="flex items-center gap-2 text-xs font-semibold text-card-foreground">
-                  Set {nextSetNumber}
-                  {/* Header, not the input row: a fourth element there
-                      squeezes the inputs into slivers at 375px. */}
-                  <button
-                    type="button"
-                    onClick={() => setDouble((prev) => !prev)}
-                    aria-pressed={double}
-                    aria-label="Two dumbbells — counts double"
-                    className={cn(
-                      "inline-flex h-6 shrink-0 items-center justify-center rounded-md border px-2 text-xs font-semibold tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                      double
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card text-muted-foreground hover:bg-secondary/60",
-                    )}
-                  >
-                    ×2
-                  </button>
+            {hydrated && currentBest > 0 ? (
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <TrendingUp className="size-3.5 text-primary" aria-hidden="true" />
+                  Best est. 1RM
                 </span>
-                {target ? (
-                  <span className="min-w-0 truncate text-xs text-muted-foreground">
-                    Last time:{" "}
-                    <span className="font-medium text-primary">{formatSet(target, unit)}</span>
-                  </span>
-                ) : null}
+                <span className="font-semibold tabular-nums text-card-foreground">
+                  {formatOneRepMax(currentBest, unit)}
+                </span>
               </div>
-              <div className="flex items-end gap-2">
-                <label className="flex flex-1 flex-col gap-1">
-                  <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Weight ({unit})
-                  </span>
-                  <input
-                    ref={weightInputRef}
-                    type="text"
-                    inputMode="decimal"
-                    value={weight}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (/^[0-9.,]*$/.test(val)) {
-                        setWeight(val);
-                      }
-                    }}
-                    placeholder={
-                      target && target.weight > 0 ? String(weightFromKg(target.weight, unit)) : "0"
-                    }
-                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </label>
-                <label className="flex flex-1 flex-col gap-1">
-                  <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Reps
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={reps}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (/^\d*$/.test(val)) {
-                        setReps(val);
-                      }
-                    }}
-                    placeholder={target ? String(target.reps) : String(exercise.reps)}
-                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={handleAdd}
-                  disabled={!canSave}
-                  className="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:opacity-50"
-                >
-                  <Check className="size-4" aria-hidden="true" />
-                  Save
-                </button>
-              </div>
-            </div>
+            ) : null}
 
-            {/* Full breakdown of the previous session for this exercise */}
             {hydrated && last ? (
               <div className="flex flex-col gap-1 border-t border-border pt-2">
                 <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">

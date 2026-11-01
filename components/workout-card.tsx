@@ -13,10 +13,6 @@ export function WorkoutCard({ day }: { day: WorkoutDay }) {
         <h2 className="inline-flex w-fit items-center rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">
           {day.label}
         </h2>
-        {/* The day's own name, not a push/pull tally: that counted only two
-            of the four movement patterns, so a squat- or hinge-led day read
-            as having fewer exercises than it has. Each row still carries its
-            own MovementBadge. */}
         <p className="flex items-center gap-2 text-lg font-bold tracking-tight text-card-foreground sm:text-xl">
           <Target className="size-4 shrink-0 text-primary sm:size-5" aria-hidden="true" />
           {day.title}
