@@ -58,6 +58,18 @@
       transform: translateY(-3px) rotate(4deg);
     }
   }
+
+  --animate-turkey-waddle: turkey-waddle 1.6s ease-in-out infinite;
+
+  @keyframes turkey-waddle {
+    0%,
+    100% {
+      transform: translateX(0) rotate(-6deg);
+    }
+    50% {
+      transform: translateX(2px) rotate(6deg);
+    }
+  }
 }
 
 :root {
@@ -90,6 +102,7 @@
   --chart-5: #e87ba4; /* magenta */
   --radius: 0.625rem;
   --halloween-glow: oklch(0.72 0.17 50 / 0.14);
+  --thanksgiving-glow: oklch(0.78 0.13 75 / 0.16);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -129,6 +142,7 @@
   --chart-4: #c98500;
   --chart-5: #d55181;
   --halloween-glow: oklch(0.62 0.17 45 / 0.16);
+  --thanksgiving-glow: oklch(0.6 0.12 65 / 0.16);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -178,7 +192,9 @@
 
 /* Unlayered so it beats utilities; stamped by components/season-stamp.tsx. */
 html:not([data-season="halloween"]) [data-season-only="halloween"],
-html[data-season="halloween"] [data-season-hide="halloween"] {
+html:not([data-season="thanksgiving"]) [data-season-only="thanksgiving"],
+html[data-season="halloween"] [data-season-hide~="halloween"],
+html[data-season="thanksgiving"] [data-season-hide~="thanksgiving"] {
   display: none;
 }
 
@@ -186,6 +202,15 @@ html[data-season="halloween"] body {
   background-image: radial-gradient(
     ellipse 90% 28rem at 50% -6rem,
     var(--halloween-glow),
+    transparent
+  );
+  background-repeat: no-repeat;
+}
+
+html[data-season="thanksgiving"] body {
+  background-image: radial-gradient(
+    ellipse 90% 28rem at 50% -6rem,
+    var(--thanksgiving-glow),
     transparent
   );
   background-repeat: no-repeat;

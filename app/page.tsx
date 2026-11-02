@@ -31,6 +31,13 @@ export default async function Page() {
             aria-hidden="true"
             data-season-only="halloween"
           />
+          <span
+            className="inline-block origin-bottom animate-turkey-waddle motion-reduce:animate-none"
+            aria-hidden="true"
+            data-season-only="thanksgiving"
+          >
+            🦃
+          </span>
         </h1>
         {/* Plan-neutral: which plan is active is a per-device preference the
             server can't know, so the day and exercise counts live on each
