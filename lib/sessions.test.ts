@@ -28,6 +28,7 @@ import {
   removeSessionWithUndo,
   removeSetFromSessions,
   removeSetWithUndo,
+  repeatableSet,
   restoreRemovedSet,
   sessionSeries,
   sessionStats,
@@ -813,6 +814,66 @@ describe("personalRecords", () => {
       "Squat",
       "Curl",
     ]);
+  });
+});
+
+describe("repeatableSet", () => {
+  const previous = [
+    makeSet({ id: "p1", weight: 60 }),
+    makeSet({ id: "p2", weight: 70 }),
+    makeSet({ id: "p3", weight: 80 }),
+  ];
+
+  it("returns last session's first set when nothing is logged today", () => {
+    const result = repeatableSet(previous, []);
+
+    expect(result?.id).toBe("p1");
+  });
+
+  it("returns last session's set at the index of today's count", () => {
+    const today = [makeSet({ id: "t1" }), makeSet({ id: "t2" })];
+
+    const result = repeatableSet(previous, today);
+
+    expect(result?.id).toBe("p3");
+  });
+
+  it("returns today's latest set once today has caught up with last session", () => {
+    const today = ["t1", "t2", "t3"].map((id) => makeSet({ id }));
+
+    const result = repeatableSet(previous, today);
+
+    expect(result?.id).toBe("t3");
+  });
+
+  it("returns today's latest set once today has passed last session", () => {
+    const today = ["t1", "t2", "t3", "t4"].map((id) => makeSet({ id }));
+
+    const result = repeatableSet(previous, today);
+
+    expect(result?.id).toBe("t4");
+  });
+
+  it("returns today's latest set when there is no previous session", () => {
+    const today = [makeSet({ id: "t1" }), makeSet({ id: "t2" })];
+
+    const result = repeatableSet(undefined, today);
+
+    expect(result?.id).toBe("t2");
+  });
+
+  it("returns undefined with no previous session and nothing today", () => {
+    const result = repeatableSet(undefined, []);
+
+    expect(result).toBeUndefined();
+  });
+
+  it("preserves a double-implement set", () => {
+    const doubleSet = makeSet({ id: "d1", weight: 16, double: true });
+
+    const result = repeatableSet([doubleSet], []);
+
+    expect(result).toEqual({ id: "d1", reps: 8, weight: 16, double: true });
   });
 });
 

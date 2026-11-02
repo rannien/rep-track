@@ -19,16 +19,17 @@ import {
   lastEntryForExercise,
   parseRepsInput,
   parseWeightInput,
+  repeatableSet,
 } from "@/lib/sessions";
 import {
   Play,
   ChevronDown,
+  Plus,
   CircleCheck,
   Dumbbell,
   Pencil,
   Trash2,
   Check,
-  History,
   Trophy,
   TrendingUp,
   X,
@@ -121,6 +122,7 @@ export function ExerciseRow({
   // The set you're about to log, and what you did for that same set last time.
   const nextSetNumber = todaysSets.length + 1;
   const target = last?.entry.sets[todaysSets.length];
+  const repeatable = repeatableSet(last?.entry.sets, todaysSets);
 
   useEffect(() => {
     if (target) {
@@ -206,24 +208,17 @@ export function ExerciseRow({
     removeSet(session.id, exercise.name, todaysSets[index].id);
   }
 
+  function logSet(set: { reps: number; weight: number; double?: boolean }) {
+    addSet({ id: dayId, label: dayLabel }, exercise.name, set, activeDate);
+    // This tap is the user gesture the completion beep needs (autoplay policy);
+    // a backfilled set is data entry, not training, so it gets no countdown.
+    if (!backdated) startRest();
+    setAnnouncement(`Set ${nextSetNumber} logged: ${formatSet(set, unit)}.`);
+  }
+
   function handleAdd() {
     if (repsValue === null || weightValue === null) return;
-    addSet(
-      { id: dayId, label: dayLabel },
-      exercise.name,
-      { reps: repsValue, weight: weightValue, double },
-      activeDate,
-    );
-    // Kick off the rest countdown from the same tap that logs the set — this
-    // is the user gesture the completion beep needs to satisfy autoplay
-    // policy. A backfilled set is data entry, not training: no countdown.
-    if (!backdated) startRest();
-    setAnnouncement(
-      `Set ${nextSetNumber} logged: ${formatSet(
-        { reps: repsValue, weight: weightValue, double },
-        unit,
-      )}.`,
-    );
+    logSet({ reps: repsValue, weight: weightValue, double });
     setReps(String(repsValue));
     setWeight("");
     weightInputRef.current?.focus();
@@ -244,10 +239,21 @@ export function ExerciseRow({
           <h3 className="leading-snug font-semibold text-card-foreground">{exercise.name}</h3>
           {targetsLine ? <p className="text-xs text-muted-foreground">{targetsLine}</p> : null}
           <div className="flex flex-wrap items-center gap-1.5 empty:hidden">
+            {hydrated && repeatable ? (
+              <button
+                type="button"
+                onClick={() => logSet(repeatable)}
+                className="relative z-10 inline-flex h-6 items-center gap-1 rounded-md bg-muted px-2 text-xs font-medium text-foreground tabular-nums transition-colors after:absolute after:-inset-x-1 after:-top-2 after:-bottom-3 hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <Plus className="size-3.5 text-primary" aria-hidden="true" />
+                {formatSet(repeatable, unit)}
+                <span className="sr-only">{`, log as set ${nextSetNumber} of ${exercise.name}`}</span>
+              </button>
+            ) : null}
             {hydrated && progress.logged > 0 ? (
               <span
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-primary",
+                  "inline-flex h-6 items-center gap-1 rounded-md px-2 text-xs text-primary",
                   progress.met ? "bg-primary/15 font-semibold" : "bg-primary/10 font-medium",
                 )}
               >
@@ -260,19 +266,12 @@ export function ExerciseRow({
               </span>
             ) : null}
             {hydrated && prSet ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+              <span className="inline-flex h-6 items-center gap-1 rounded-md bg-amber-500/15 px-2 text-xs font-semibold text-amber-600 dark:text-amber-400">
                 <Trophy className="size-3" aria-hidden="true" />
                 New PR · {formatSet(prSet, unit)}
               </span>
             ) : null}
           </div>
-          {hydrated && last ? (
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <History className="size-3" aria-hidden="true" />
-              Last {formatDate(last.session.startedAt)}:{" "}
-              {last.entry.sets.map((s) => formatSet(s, unit)).join(", ")}
-            </span>
-          ) : null}
         </div>
 
         <p className="inline-flex min-w-16 shrink-0 items-baseline justify-center rounded-lg bg-primary/10 px-2 py-1 text-lg leading-none font-bold text-primary tabular-nums dark:bg-primary/15">
@@ -304,6 +303,11 @@ export function ExerciseRow({
           />
         </button>
       </div>
+
+      {/* Outside the inert panel so a repeatable-set log is announced while collapsed. */}
+      <output className="sr-only" aria-live="polite">
+        {announcement}
+      </output>
 
       <div
         inert={!open}
@@ -401,7 +405,7 @@ export function ExerciseRow({
                     placeholder={
                       target && target.weight > 0 ? String(weightFromKg(target.weight, unit)) : "0"
                     }
-                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-base tabular-nums text-card-foreground outline-none md:text-sm focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </label>
                 <label className="flex flex-1 flex-col gap-1">
@@ -422,7 +426,7 @@ export function ExerciseRow({
                       if (e.key === "Enter") handleAdd();
                     }}
                     placeholder={target ? String(target.reps) : String(exercise.reps)}
-                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-base tabular-nums text-card-foreground outline-none md:text-sm focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </label>
                 <button
@@ -478,7 +482,7 @@ export function ExerciseRow({
                                 if (e.key === "Escape") cancelEdit();
                               }}
                               placeholder="0"
-                              className="w-20 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              className="w-20 rounded-lg border border-border bg-card px-2 py-1 text-base tabular-nums text-card-foreground outline-none md:text-sm focus-visible:ring-2 focus-visible:ring-ring"
                             />
                           </label>
                           <span className="shrink-0 text-xs text-muted-foreground">{unit} ×</span>
@@ -497,7 +501,7 @@ export function ExerciseRow({
                                 if (e.key === "Enter") saveEdit(i + 1);
                                 if (e.key === "Escape") cancelEdit();
                               }}
-                              className="w-16 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              className="w-16 rounded-lg border border-border bg-card px-2 py-1 text-base tabular-nums text-card-foreground outline-none md:text-sm focus-visible:ring-2 focus-visible:ring-ring"
                             />
                           </label>
                           <button
@@ -583,10 +587,6 @@ export function ExerciseRow({
                 })}
               </ul>
             ) : null}
-
-            <output className="sr-only" aria-live="polite">
-              {announcement}
-            </output>
 
             {hydrated && currentBest > 0 ? (
               <div className="flex items-center justify-between gap-2 text-xs">

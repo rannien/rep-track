@@ -331,7 +331,7 @@ function EditableSets({
                       if (e.key === "Escape") setEditingSetId(null);
                     }}
                     placeholder="0"
-                    className="w-20 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="w-20 rounded-lg border border-border bg-card px-2 py-1 text-base tabular-nums text-card-foreground outline-none md:text-sm focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </label>
                 <span className="shrink-0 text-xs text-muted-foreground">{unit} ×</span>
@@ -348,7 +348,7 @@ function EditableSets({
                       if (e.key === "Enter") saveEdit(i + 1);
                       if (e.key === "Escape") setEditingSetId(null);
                     }}
-                    className="w-16 rounded-lg border border-border bg-card px-2 py-1 text-sm tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="w-16 rounded-lg border border-border bg-card px-2 py-1 text-base tabular-nums text-card-foreground outline-none md:text-sm focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </label>
                 <button
