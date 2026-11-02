@@ -7,8 +7,13 @@ describe("seasonOn", () => {
     expect(seasonOn(new Date(2026, 9, 31, 23, 59, 59))).toBe("halloween");
   });
 
-  it("is off-season either side of October", () => {
+  it("is thanksgiving from the first to the last moment of November", () => {
+    expect(seasonOn(new Date(2026, 10, 1, 0, 0, 0))).toBe("thanksgiving");
+    expect(seasonOn(new Date(2026, 10, 30, 23, 59, 59))).toBe("thanksgiving");
+  });
+
+  it("is off-season either side of October and November", () => {
     expect(seasonOn(new Date(2026, 8, 30, 23, 59, 59))).toBeNull();
-    expect(seasonOn(new Date(2026, 10, 1, 0, 0, 0))).toBeNull();
+    expect(seasonOn(new Date(2026, 11, 1, 0, 0, 0))).toBeNull();
   });
 });

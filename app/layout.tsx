@@ -102,11 +102,14 @@ export default async function RootLayout({
             humans". */}
         <footer className="mx-auto w-full max-w-5xl px-4 pb-8 text-center text-xs text-muted-foreground sm:px-6">
           Made with{" "}
-          <span aria-hidden="true" data-season-hide="halloween">
+          <span aria-hidden="true" data-season-hide="halloween thanksgiving">
             ❤️
           </span>
           <span aria-hidden="true" data-season-only="halloween">
             🎃
+          </span>
+          <span aria-hidden="true" data-season-only="thanksgiving">
+            🦃
           </span>
           <span className="sr-only">love</span> and <span aria-hidden="true">🤖</span>
           <span className="sr-only">AI</span> for <span aria-hidden="true">👥</span>
