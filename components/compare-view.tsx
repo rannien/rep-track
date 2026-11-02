@@ -175,7 +175,7 @@ export function CompareView() {
             maxLength={MAX_PROFILE_NAME_LENGTH}
             placeholder="Friend"
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-base text-card-foreground outline-none md:text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
         </label>
         <div>

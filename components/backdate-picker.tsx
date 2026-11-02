@@ -40,7 +40,7 @@ export function BackdatePicker({ dayId }: { dayId: string }) {
           const next = parseDateKeyParam(e.target.value);
           setDateFor(dayId, next !== null && next <= today ? next : null);
         }}
-        className="rounded-lg border border-border bg-card px-2 py-1 text-xs tabular-nums text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="rounded-lg border border-border bg-card px-2 py-1 text-base tabular-nums text-card-foreground outline-none md:text-xs focus-visible:ring-2 focus-visible:ring-ring"
       />
       {backdated && (
         <button

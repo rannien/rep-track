@@ -34,7 +34,7 @@ import { MAX_REPS } from "@/lib/sessions";
 import type { PlanDay } from "@/lib/workouts";
 
 const fieldClass =
-  "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring";
+  "w-full rounded-lg border border-border bg-card px-3 py-2 text-base text-card-foreground outline-none md:text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring";
 const labelClass = "text-[10px] font-medium uppercase tracking-wide text-muted-foreground";
 
 export function PlanEditor({ plan, onBack }: { plan: CustomPlan; onBack: () => void }) {

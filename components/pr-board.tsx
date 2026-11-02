@@ -96,7 +96,7 @@ export function PrBoard() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search exercises…"
-            className="w-full rounded-lg border border-border bg-card py-2 pl-9 pr-3 text-sm text-card-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="w-full rounded-lg border border-border bg-card py-2 pl-9 pr-3 text-base text-card-foreground outline-none md:text-sm placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
         </label>
         <button

@@ -738,6 +738,14 @@ export function personalRecords(sessions: Session[]): PersonalRecord[] {
   );
 }
 
+// Matching set from last time, else today's latest set; undefined when neither exists.
+export function repeatableSet(
+  previousSets: readonly LoggedSet[] | undefined,
+  todaysSets: readonly LoggedSet[],
+): LoggedSet | undefined {
+  return previousSets?.[todaysSets.length] ?? todaysSets.at(-1);
+}
+
 // Most recent session — excluding the one in progress — that logged this
 // exercise, so the UI can surface "what you lifted last time" set by set.
 export function lastEntryForExercise(
