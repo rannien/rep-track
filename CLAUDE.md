@@ -22,7 +22,7 @@ pnpm perf:latency   # TTFB p50/p95 smoke against $PERF_BASE_URL (staging/preview
 
 **Tests are [vitest](https://vitest.dev) unit tests** covering the pure logic
 in `lib/` (`sessions.test.ts`, `backup.test.ts`, `workouts.test.ts`,
-`rest-timer.test.ts`, `adherence.test.ts`, `theme.test.ts`, `units.test.ts`, `compare.test.ts`, `plans.test.ts`, `custom-plans.test.ts`):
+`rest-timer.test.ts`, `adherence.test.ts`, `theme.test.ts`, `units.test.ts`, `compare.test.ts`, `plans.test.ts`, `custom-plans.test.ts`, `service-worker.test.ts`, `splash.test.ts`):
 payload validation (including hostile/prototype-pollution payloads), session
 mutations (`addSetToSessions`/`removeSetFromSessions`/`updateSetInSessions`/
 `removeSetWithUndo`+`restoreRemovedSet`), "last time" lookup, stats
@@ -32,7 +32,7 @@ input parsing, custom-plan parsing/caps/editing ops/backup merge, kg/lb conversi
 executing the inline `THEME_INIT_SCRIPT` and `PLAN_INIT_SCRIPT` against
 stubbed globals), plan-registry invariants (plan ids, day ids and day labels
 unique across plans; one canonical definition per exercise name), day-legend
-color assignment, and plan-data invariants for every shipped plan. No config file — vitest defaults
+color assignment, plan-data invariants for every shipped plan, and the service worker's cache-first navigation (executing `public/sw.js` against stubbed `caches`/`fetch`), and the iOS splash-screen size/media table. No config file — vitest defaults
 (node environment) suffice because the tested layer is IO-free. Tests import
 from `"vitest"` explicitly; there is no globals setup. Keep component logic
 extractable: pure state transitions live in `lib/`, providers stay thin.
@@ -81,6 +81,7 @@ setting on the repo, not something the workflow can do. `pnpm-workspace.yaml`
 - **Dual-implement sets**: `LoggedSet.double` (optional, literal `true`, absent otherwise) marks a set done with two implements at once (a dumbbell per hand). `setLoad()` in `lib/sessions.ts` is the _only_ place doubling happens — volume and `personalRecords` rank by it; `estimatedOneRepMax` deliberately stays per implement. `formatSet` renders the notation (`2×16 kg × 8`), and the ×2 toggle appears in the logging panel and both edit modes.
 - **Backdating**: `components/logging-date-provider.tsx` (plan page only, pure view state) holds a per-day date override; `BackdatePicker` (single-date calendar popover in `DaySessionSummary`) sets it. `ExerciseRow` logs via `sessionOn(dayId, dateKey)` and `addSet(..., dateKey)`; a backfilled session gets `backdatedSessionStart` (local noon) as `startedAt`, and logging a backdated set never starts the rest timer.
 - **/stats addition**: per-muscle-group totals chart (`components/muscle-totals-chart.tsx`). The all-time PR board lives on its own `/records` page (`components/pr-board.tsx`, fed by `personalRecords()` in `lib/sessions.ts`) — records are the heaviest set actually lifted per exercise (equal weight only takes the record with more reps), never an estimated 1RM, and they're kept off `/stats` because they aren't a date-filterable view.
+- **Home-screen launch.** `public/sw.js` serves navigations cache-first and refreshes the cached page in the background (10 s timeout; non-ok and redirected responses are never cached), so a cold iOS standalone launch paints without a network round trip — a deploy shows up one launch later. iOS shows white until first paint unless an `apple-touch-startup-image` matches the device exactly, so `lib/splash.ts` lists the device sizes (iPhones portrait, iPads both orientations, light and dark) and `app/splash/[screen]/route.tsx` renders each as a build-time PNG of `public/icon.svg` on `SPLASH_BACKGROUND` (hand-synced with `--background`; also the manifest's `background_color`, which is all Android's generated splash uses). A new iPhone size needs a row in `DEVICES`; iOS fetches the image when the app is added, so re-add it to see changes.
 - **Friend comparison** (`/compare`, `lib/compare.ts`, key `rep-track-compare-v1`): a friend's exported backup is imported as a read-only `ComparisonProfile` — never merged into the user's sessions, nothing leaves the device — and compared via `compareRecords` (union by exercise name, `knownDays` order first — active plan, then the other plan, then off-plan names — leader by `setLoad`) and `compareTotals` (average volume per session as the fair number when histories differ in length). `formatRecordsShareText` feeds the "Share my records" button on `/records` (Web Share API, clipboard fallback).
 
 ### Session tracking (the core feature)

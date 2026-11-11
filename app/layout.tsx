@@ -9,6 +9,7 @@ import { SessionProvider } from "@/components/session-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { UnitProvider } from "@/components/unit-provider";
 import { getCatalog, getPlans } from "@/lib/catalog-source";
+import { splashStartupImages } from "@/lib/splash";
 import { DEFAULT_PLAN_ID, PLAN_INIT_SCRIPT } from "@/lib/plans";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
@@ -38,7 +39,9 @@ export const metadata: Metadata = {
     capable: true,
     title: "Rep Track",
     statusBarStyle: "default",
+    startupImage: splashStartupImages(),
   },
+  other: { "apple-mobile-web-app-capable": "yes" },
 };
 
 // The brand tint for the mobile status bar / installed title bar, per OS
