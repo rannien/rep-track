@@ -56,8 +56,8 @@ refs. No paths are excluded: `public/sw.js` ships to the browser and
 `perf/*.mjs` runs in CI. Findings surface as PR checks and
 Security-tab alerts; making them _block_ a merge is a branch-protection
 setting on the repo, not something the workflow can do. `pnpm-workspace.yaml`
-`overrides` keep next's transitive `postcss`/`sharp` pins on patched
-versions.
+`overrides` keep vulnerable transitive pins (next's `postcss`/`sharp`/
+`source-map-js`, the dev toolchain's `tinypool`/`vite`) on patched versions.
 
 **Linting/formatting is [oxc](https://oxc.rs), not ESLint/Prettier.** `oxlint` + `oxfmt` replace them — there is no eslint/prettier config or dependency. oxfmt formats with Prettier-compatible defaults (semicolons, double quotes, 80-col). `.oxlintrc.json` disables `react/react-in-jsx-scope` (the automatic JSX runtime makes it moot) and `import/no-unassigned-import` (side-effect CSS imports). The vendored skill under `.claude/` is excluded from oxfmt via `ignorePatterns`.
 

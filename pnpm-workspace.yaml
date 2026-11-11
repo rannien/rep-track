@@ -10,10 +10,18 @@ allowBuilds:
   sharp: false
   msw: false
 
-# next pins vulnerable transitive versions (postcss 8.4.31, sharp <0.35);
-# force the patched releases everywhere so `pnpm audit --prod` stays clean.
+# next and the dev toolchain pin vulnerable transitive versions; force the
+# patched releases everywhere so `pnpm audit` (prod and dev) stays clean.
 #   postcss >=8.5.25 — GHSA-fxqj-rqcc-2cmp line (source-map file reads) + XSS
-#   sharp   >=0.35.0 — inherited libvips CVEs (unused here, but still resolved)
+#   sharp   >=0.35.5 — inherited libvips/libheif/librsvg CVEs (unused here, but still resolved)
+#   source-map-js >=1.2.2 — GHSA-68fv-2mgg-jv7q (event-loop DoS), via postcss
+#   baseline-browser-mapping >=2.11.0 — GHSA-w5vr-8v7q-w6rv (process termination)
+#   tinypool >=2.1.2 — GHSA-85c8-ppgw-ccpr line (prototype pollution → RCE), via oxfmt
+#   vite ^7.3.7 — GHSA-587h-7wmj-h5pm line (dev-server file reads), via vitest
 overrides:
   postcss: ">=8.5.25"
-  sharp: ">=0.35.0"
+  sharp: ">=0.35.5"
+  source-map-js: ">=1.2.2"
+  baseline-browser-mapping: ">=2.11.0"
+  tinypool: ">=2.1.2"
+  vite: "^7.3.7"
