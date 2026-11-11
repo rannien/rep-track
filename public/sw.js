@@ -1,12 +1,7 @@
-// Rep Track service worker — makes the app shell available offline so a set
-// can still be logged when the gym's signal drops. Runtime caching only (no
-// precache manifest to go stale against Next's hashed asset names): same-origin
-// GETs are cached as they're fetched. Navigations are network-first (fresh
-// HTML when online, cached shell when not); other assets are
-// stale-while-revalidate. All data lives in localStorage, so nothing here
-// touches the user's history.
+// Runtime caching only: a precache would go stale against hashed asset names.
 
 const CACHE = "rep-track-v1";
+const NAVIGATION_TIMEOUT_MS = 10_000;
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -28,19 +23,7 @@ self.addEventListener("fetch", (event) => {
   if (new URL(request.url).origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(
-      (async () => {
-        try {
-          const fresh = await fetch(request);
-          const cache = await caches.open(CACHE);
-          cache.put(request, fresh.clone());
-          return fresh;
-        } catch {
-          const cached = await caches.match(request);
-          return cached ?? (await caches.match("/")) ?? Response.error();
-        }
-      })(),
-    );
+    handleNavigation(event);
     return;
   }
 
@@ -59,3 +42,34 @@ self.addEventListener("fetch", (event) => {
     })(),
   );
 });
+
+function handleNavigation(event) {
+  const { request } = event;
+  const network = fetch(request, { signal: AbortSignal.timeout(NAVIGATION_TIMEOUT_MS) }).then(
+    (response) => {
+      // Fetch spec, HTTP fetch: manual-redirect navigations treat a followed redirect as a network error.
+      const copy = response.ok && !response.redirected ? response.clone() : null;
+      return { response, copy };
+    },
+  );
+
+  event.waitUntil(
+    network.then(async ({ copy }) => {
+      if (!copy) return;
+      const cache = await caches.open(CACHE);
+      await cache.put(request, copy);
+    }),
+  );
+
+  event.respondWith(
+    (async () => {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+      try {
+        return (await network).response;
+      } catch {
+        return (await caches.match("/")) ?? Response.error();
+      }
+    })(),
+  );
+}

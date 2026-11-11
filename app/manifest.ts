@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SPLASH_BACKGROUND } from "@/lib/splash";
 
 // Web app manifest — makes Rep Track installable to the home screen and drives
 // the standalone (chrome-less) launch. Next serves this at /manifest.webmanifest
@@ -13,7 +14,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#ffffff",
+    background_color: SPLASH_BACKGROUND.light,
     theme_color: "#4b50d5",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
