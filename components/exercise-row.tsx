@@ -442,149 +442,151 @@ export function ExerciseRow({
             </div>
 
             {hydrated && todaysSets.length > 0 ? (
-              <ul aria-label="Sets logged today" className="flex flex-col gap-1.5">
-                {todaysSets.map((log, i) => {
-                  const ref = last?.entry.sets[i];
-                  const editing = editingSetId === log.id;
-                  return (
-                    <li
-                      key={log.id}
-                      className={cn(
-                        "rounded-lg border border-border bg-card px-3",
-                        // Editing lays out as two rows (inputs, then ×2 +
-                        // actions) — one line can't fit it all at 375px.
-                        editing
-                          ? "flex flex-col gap-2 py-2"
-                          : "flex items-center justify-between gap-2 py-1.5",
-                      )}
-                    >
-                      {editing ? (
-                        <span className="flex items-center gap-2 text-sm tabular-nums text-card-foreground">
-                          <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
-                            {i + 1}
-                          </span>
-                          <label>
-                            <span className="sr-only">
-                              Weight in {unit === "kg" ? "kilograms" : "pounds"} for set {i + 1}
+              <ul aria-label="Sets logged today, newest first" className="flex flex-col gap-1.5">
+                {todaysSets
+                  .map((log, i) => {
+                    const ref = last?.entry.sets[i];
+                    const editing = editingSetId === log.id;
+                    return (
+                      <li
+                        key={log.id}
+                        className={cn(
+                          "rounded-lg border border-border bg-card px-3",
+                          // Editing lays out as two rows (inputs, then ×2 +
+                          // actions) — one line can't fit it all at 375px.
+                          editing
+                            ? "flex flex-col gap-2 py-2"
+                            : "flex items-center justify-between gap-2 py-1.5",
+                        )}
+                      >
+                        {editing ? (
+                          <span className="flex items-center gap-2 text-sm tabular-nums text-card-foreground">
+                            <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
+                              {i + 1}
                             </span>
-                            <input
-                              ref={editWeightInputRef}
-                              type="text"
-                              inputMode="decimal"
-                              value={editWeight}
-                              onChange={(e) => {
-                                if (/^[0-9.,]*$/.test(e.target.value)) {
-                                  setEditWeight(e.target.value);
+                            <label>
+                              <span className="sr-only">
+                                Weight in {unit === "kg" ? "kilograms" : "pounds"} for set {i + 1}
+                              </span>
+                              <input
+                                ref={editWeightInputRef}
+                                type="text"
+                                inputMode="decimal"
+                                value={editWeight}
+                                onChange={(e) => {
+                                  if (/^[0-9.,]*$/.test(e.target.value)) {
+                                    setEditWeight(e.target.value);
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") saveEdit(i + 1);
+                                  if (e.key === "Escape") cancelEdit();
+                                }}
+                                placeholder="0"
+                                className="w-20 rounded-lg border border-border bg-card px-2 py-1 text-base tabular-nums text-card-foreground outline-none md:text-sm focus-visible:ring-2 focus-visible:ring-ring"
+                              />
+                            </label>
+                            <span className="shrink-0 text-xs text-muted-foreground">{unit} ×</span>
+                            <label>
+                              <span className="sr-only">Reps for set {i + 1}</span>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={editReps}
+                                onChange={(e) => {
+                                  if (/^\d*$/.test(e.target.value)) {
+                                    setEditReps(e.target.value);
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") saveEdit(i + 1);
+                                  if (e.key === "Escape") cancelEdit();
+                                }}
+                                className="w-16 rounded-lg border border-border bg-card px-2 py-1 text-base tabular-nums text-card-foreground outline-none md:text-sm focus-visible:ring-2 focus-visible:ring-ring"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setEditDouble((prev) => !prev)}
+                              aria-pressed={editDouble}
+                              aria-label={`Two dumbbells for set ${i + 1} — counts double`}
+                              className={cn(
+                                "inline-flex h-7 shrink-0 items-center justify-center rounded-md border px-2 text-xs font-semibold tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                                editDouble
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-border bg-card text-muted-foreground hover:bg-secondary/60",
+                              )}
+                            >
+                              ×2
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="flex min-w-0 items-center gap-2 text-sm tabular-nums text-card-foreground">
+                            <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
+                              {i + 1}
+                            </span>
+                            <span className="shrink-0 whitespace-nowrap font-medium">
+                              {formatSet(log, unit)}
+                            </span>
+                            {ref ? (
+                              // Truncates rather than wrapping the row — the
+                              // primary value always stays on one line.
+                              <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
+                                (last {formatSet(ref, unit)})
+                              </span>
+                            ) : null}
+                          </span>
+                        )}
+                        {editing ? (
+                          <span className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => saveEdit(i + 1)}
+                              disabled={!canSaveEdit}
+                              aria-label={`Save changes to set ${i + 1}`}
+                              className="inline-flex size-7 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Check className="size-3.5" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEdit}
+                              aria-label={`Cancel editing set ${i + 1}`}
+                              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-card-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            >
+                              <X className="size-3.5" aria-hidden="true" />
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              ref={(el) => {
+                                if (el && pencilFocusRef.current === log.id) {
+                                  pencilFocusRef.current = null;
+                                  el.focus({ preventScroll: true });
                                 }
                               }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") saveEdit(i + 1);
-                                if (e.key === "Escape") cancelEdit();
-                              }}
-                              placeholder="0"
-                              className="w-20 rounded-lg border border-border bg-card px-2 py-1 text-base tabular-nums text-card-foreground outline-none md:text-sm focus-visible:ring-2 focus-visible:ring-ring"
-                            />
-                          </label>
-                          <span className="shrink-0 text-xs text-muted-foreground">{unit} ×</span>
-                          <label>
-                            <span className="sr-only">Reps for set {i + 1}</span>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              value={editReps}
-                              onChange={(e) => {
-                                if (/^\d*$/.test(e.target.value)) {
-                                  setEditReps(e.target.value);
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") saveEdit(i + 1);
-                                if (e.key === "Escape") cancelEdit();
-                              }}
-                              className="w-16 rounded-lg border border-border bg-card px-2 py-1 text-base tabular-nums text-card-foreground outline-none md:text-sm focus-visible:ring-2 focus-visible:ring-ring"
-                            />
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setEditDouble((prev) => !prev)}
-                            aria-pressed={editDouble}
-                            aria-label={`Two dumbbells for set ${i + 1} — counts double`}
-                            className={cn(
-                              "inline-flex h-7 shrink-0 items-center justify-center rounded-md border px-2 text-xs font-semibold tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                              editDouble
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-border bg-card text-muted-foreground hover:bg-secondary/60",
-                            )}
-                          >
-                            ×2
-                          </button>
-                        </span>
-                      ) : (
-                        <span className="flex min-w-0 items-center gap-2 text-sm tabular-nums text-card-foreground">
-                          <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary">
-                            {i + 1}
+                              onClick={() => beginEdit(log)}
+                              aria-label={`Edit set ${i + 1}`}
+                              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            >
+                              <Pencil className="size-3.5" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemove(i)}
+                              aria-label={`Remove set ${i + 1}`}
+                              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            >
+                              <Trash2 className="size-3.5" aria-hidden="true" />
+                            </button>
                           </span>
-                          <span className="shrink-0 whitespace-nowrap font-medium">
-                            {formatSet(log, unit)}
-                          </span>
-                          {ref ? (
-                            // Truncates rather than wrapping the row — the
-                            // primary value always stays on one line.
-                            <span className="min-w-0 truncate text-xs font-normal text-muted-foreground">
-                              (last {formatSet(ref, unit)})
-                            </span>
-                          ) : null}
-                        </span>
-                      )}
-                      {editing ? (
-                        <span className="flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => saveEdit(i + 1)}
-                            disabled={!canSaveEdit}
-                            aria-label={`Save changes to set ${i + 1}`}
-                            className="inline-flex size-7 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <Check className="size-3.5" aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={cancelEdit}
-                            aria-label={`Cancel editing set ${i + 1}`}
-                            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-card-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                          >
-                            <X className="size-3.5" aria-hidden="true" />
-                          </button>
-                        </span>
-                      ) : (
-                        <span className="flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            ref={(el) => {
-                              if (el && pencilFocusRef.current === log.id) {
-                                pencilFocusRef.current = null;
-                                el.focus({ preventScroll: true });
-                              }
-                            }}
-                            onClick={() => beginEdit(log)}
-                            aria-label={`Edit set ${i + 1}`}
-                            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                          >
-                            <Pencil className="size-3.5" aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemove(i)}
-                            aria-label={`Remove set ${i + 1}`}
-                            className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                          >
-                            <Trash2 className="size-3.5" aria-hidden="true" />
-                          </button>
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
+                        )}
+                      </li>
+                    );
+                  })
+                  .toReversed()}
               </ul>
             ) : null}
 
